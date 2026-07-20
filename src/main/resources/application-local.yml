@@ -1,0 +1,42 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/lottotrip
+    username: ${DB_USERNAME:lottotrip}
+    password: ${DB_PASSWORD:lottotrip}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:local-dummy-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:local-dummy-google-client-secret}
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID:local-dummy-kakao-client-id}
+            client-secret: ${KAKAO_CLIENT_SECRET:local-dummy-kakao-client-secret}
+          naver:
+            client-id: ${NAVER_CLIENT_ID:local-dummy-naver-client-id}
+            client-secret: ${NAVER_CLIENT_SECRET:local-dummy-naver-client-secret}
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-only-secret-key-please-change-32bytes}
+
+logging:
+  level:
+    com.lottotrip: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
