@@ -43,12 +43,22 @@ class ApiResponseTest {
     }
 
     @Test
-    @DisplayName("JSON으로 변환하면 값이 null인 필드는 빠진다")
-    void serializeExcludesNullFields() throws Exception {
+    @DisplayName("성공 응답을 JSON으로 바꾸면 error가 null로 함께 내려간다")
+    void serializeSuccessKeepsNullError() throws Exception {
         String json = objectMapper.writeValueAsString(ApiResponse.success("hello"));
 
         assertThat(json).contains("\"success\":true");
         assertThat(json).contains("\"data\":\"hello\"");
-        assertThat(json).doesNotContain("error");
+        assertThat(json).contains("\"error\":null");
+    }
+
+    @Test
+    @DisplayName("실패 응답을 JSON으로 바꾸면 data가 null로 함께 내려간다")
+    void serializeFailKeepsNullData() throws Exception {
+        String json = objectMapper.writeValueAsString(ApiResponse.fail(ErrorCode.NO_PLACE_FOUND));
+
+        assertThat(json).contains("\"success\":false");
+        assertThat(json).contains("\"data\":null");
+        assertThat(json).contains("\"code\":\"SLOT_001\"");
     }
 }
