@@ -1,11 +1,15 @@
 package com.lottotrip.common.exception;
 
+import com.lottotrip.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -38,6 +43,21 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.data").isEmpty())
                 .andExpect(jsonPath("$.error.code").value("SLOT_001"))
                 .andExpect(jsonPath("$.error.message").value("반경 내 후보 장소가 없습니다."));
+    }
+
+    @ParameterizedTest
+    @EnumSource(ErrorCode.class)
+    @DisplayName("어떤 ErrorCode로 던지든 그 ErrorCode에 정의된 상태 코드와 코드로 응답한다")
+    void handleCustomExceptionForEveryErrorCode(ErrorCode errorCode) {
+        ResponseEntity<ApiResponse<Void>> response =
+                new GlobalExceptionHandler().handleCustomException(new CustomException(errorCode));
+
+        assertThat(response.getStatusCode()).isEqualTo(errorCode.getHttpStatus());
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().isSuccess()).isFalse();
+        assertThat(response.getBody().getData()).isNull();
+        assertThat(response.getBody().getError().getCode()).isEqualTo(errorCode.getCode());
+        assertThat(response.getBody().getError().getMessage()).isEqualTo(errorCode.getMessage());
     }
 
     @Test
