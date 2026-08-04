@@ -73,6 +73,38 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("본문 JSON이 깨져 파싱조차 못 하면 400 BAD_REQUEST로 응답한다")
+    void handleUnreadableBody() throws Exception {
+        mockMvc.perform(post("/test/valid")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": "))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.data").isEmpty())
+                .andExpect(jsonPath("$.error.code").value("COMMON_400"));
+    }
+
+    @Test
+    @DisplayName("본문의 타입이 맞지 않으면 400 BAD_REQUEST로 응답한다")
+    void handleTypeMismatchBody() throws Exception {
+        mockMvc.perform(post("/test/valid")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\": {\"a\": 1}}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("COMMON_400"));
+    }
+
+    @Test
+    @DisplayName("허용되지 않은 HTTP 메서드는 405로 응답하되 공통 응답 형태를 유지한다")
+    void handleMethodNotSupported() throws Exception {
+        mockMvc.perform(get("/test/valid"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("COMMON_400"));
+    }
+
+    @Test
     @DisplayName("예상하지 못한 예외는 500 INTERNAL_ERROR로 응답하고 내부 메시지를 노출하지 않는다")
     void handleUnexpectedException() throws Exception {
         mockMvc.perform(get("/test/boom"))
