@@ -1,6 +1,6 @@
 package com.lottotrip.slot.entity;
 
-import com.lottotrip.place.entity.BudgetLevel;
+import com.lottotrip.common.enums.BudgetLevel;
 import com.lottotrip.place.entity.City;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.State;

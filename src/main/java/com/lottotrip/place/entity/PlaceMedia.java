@@ -1,5 +1,6 @@
 package com.lottotrip.place.entity;
 
+import com.lottotrip.common.enums.MediaType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

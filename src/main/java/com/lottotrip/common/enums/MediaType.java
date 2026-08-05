@@ -1,4 +1,4 @@
-package com.lottotrip.place.entity;
+package com.lottotrip.common.enums;
 
 /**
  * 미디어 종류. ERD의 {@code media_type} enum에 대응한다.

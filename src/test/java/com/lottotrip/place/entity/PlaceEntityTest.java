@@ -1,5 +1,7 @@
 package com.lottotrip.place.entity;
 
+import com.lottotrip.common.enums.BudgetLevel;
+import com.lottotrip.common.enums.MediaType;
 import com.lottotrip.support.PostgresContainerSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

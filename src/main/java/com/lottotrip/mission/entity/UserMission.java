@@ -1,6 +1,6 @@
 package com.lottotrip.mission.entity;
 
-import com.lottotrip.place.entity.MediaType;
+import com.lottotrip.common.enums.MediaType;
 import com.lottotrip.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

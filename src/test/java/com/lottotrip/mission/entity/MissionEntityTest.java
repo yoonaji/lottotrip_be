@@ -1,8 +1,8 @@
 package com.lottotrip.mission.entity;
 
-import com.lottotrip.place.entity.BudgetLevel;
+import com.lottotrip.common.enums.BudgetLevel;
 import com.lottotrip.place.entity.City;
-import com.lottotrip.place.entity.MediaType;
+import com.lottotrip.common.enums.MediaType;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.State;
 import com.lottotrip.place.entity.TravelCategory;

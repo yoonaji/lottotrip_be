@@ -1,6 +1,6 @@
 package com.lottotrip.slot.entity;
 
-import com.lottotrip.place.entity.BudgetLevel;
+import com.lottotrip.common.enums.BudgetLevel;
 import com.lottotrip.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

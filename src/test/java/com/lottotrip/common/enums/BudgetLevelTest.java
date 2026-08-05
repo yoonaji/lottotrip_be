@@ -1,4 +1,4 @@
-package com.lottotrip.place.entity;
+package com.lottotrip.common.enums;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;

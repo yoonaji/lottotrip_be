@@ -1,4 +1,4 @@
-package com.lottotrip.place.entity;
+package com.lottotrip.common.enums;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
