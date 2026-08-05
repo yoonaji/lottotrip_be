@@ -16,5 +16,6 @@ import java.time.Instant;
 public class HealthResponse {
 
     private final String status;
+    private final String db;
     private final Instant timestamp;
 }
