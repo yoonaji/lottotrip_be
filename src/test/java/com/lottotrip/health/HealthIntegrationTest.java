@@ -1,15 +1,12 @@
 package com.lottotrip.health;
 
+import com.lottotrip.support.PostgresContainerSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.web.servlet.MockMvc;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,22 +20,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 그래서 "필터·시큐리티·JSON 직렬화까지 다 거친 진짜 요청"이 어떻게 되는지는 확인하지 못했다.
  * 통합 테스트는 애플리케이션 전체를 실제로 띄워서, 요청이 들어와 응답이 나갈 때까지의
  * 전 구간이 명세대로 동작하는지 확인한다.
+ *
+ * <p>DB는 {@link PostgresContainerSupport}가 띄우는 진짜 PostgreSQL을 쓴다. 헬스 체크는
+ * "DB에 실제로 붙을 수 있는가"를 확인하는 API라, 가짜 DataSource로는 확인 자체가 무의미하다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Testcontainers
-class HealthIntegrationTest {
-
-    /**
-     * 테스트 실행 중에만 살아 있는 진짜 PostgreSQL.
-     *
-     * <p>헬스 체크는 "DB에 실제로 붙을 수 있는가"를 확인하는 API다. 가짜 DataSource로는
-     * 그 확인 자체가 무의미하므로, 운영과 같은 종류의 DB(PostgreSQL 16)를 컨테이너로 띄운다.
-     * H2 같은 다른 DB로 대체하면 "테스트는 통과하는데 운영에서 안 되는" 상황이 생길 수 있다.
-     */
-    @Container
-    @ServiceConnection // 컨테이너의 접속 정보(url/user/password)를 스프링 DataSource 설정에 자동으로 꽂아 준다.
-    static final PostgreSQLContainer POSTGRES = new PostgreSQLContainer("postgres:16-alpine");
+class HealthIntegrationTest extends PostgresContainerSupport {
 
     @Autowired
     private MockMvc mockMvc;
