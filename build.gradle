@@ -50,6 +50,7 @@ dependencies {
 
     // 6. 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-webmvc-test'   // @AutoConfigureMockMvc / @WebMvcTest (Boot 4에서 별도 모듈로 분리됨)
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
