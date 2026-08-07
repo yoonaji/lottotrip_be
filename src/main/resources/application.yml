@@ -51,6 +51,12 @@ oauth:
     # 액세스 토큰으로 사용자 정보를 조회하는 카카오 API.
     # 조회가 성공하면 토큰이 유효한 것이고, 401이면 유효하지 않은 것이다.
     user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+  google:
+    # identity token의 서명을 검증할 구글 공개키 목록.
+    jwks-uri: ${GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
+    # 우리 앱의 구글 클라이언트 ID. 토큰의 aud가 이 중 하나여야 한다.
+    # ⚠️ iOS 클라이언트 ID 미확보 상태다. 비어 있으면 구글 로그인은 400으로 거절된다.
+    audiences: ${GOOGLE_AUDIENCES:}
 
 jwt:
   secret: ${JWT_SECRET:}
