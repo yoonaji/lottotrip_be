@@ -2,12 +2,14 @@ package com.lottotrip.auth.controller;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.LogoutResponse;
 import com.lottotrip.auth.dto.RefreshRequest;
 import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.service.AuthService;
 import com.lottotrip.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -46,5 +48,18 @@ public class AuthController {
     @PostMapping("/refresh")
     public ApiResponse<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request) {
         return ApiResponse.success(authService.refresh(request));
+    }
+
+    /**
+     * 로그아웃. <b>인증이 필요한</b> 유일한 인증 API다. 본문은 없다.
+     *
+     * <p>{@code @AuthenticationPrincipal}은 "지금 이 요청을 보낸 사람"을 꺼내는 표시다.
+     * 4-2의 JWT 필터가 토큰에서 읽은 userId를 보관함에 넣어 두었고, 여기서 그것을 받는다.
+     * 요청 본문으로 userId를 받지 않는 이유는, 그러면 <b>남의 번호를 적어 보낼 수 있기</b> 때문이다.
+     * 토큰에서 꺼낸 값은 서명으로 보호되므로 위조할 수 없다.
+     */
+    @PostMapping("/logout")
+    public ApiResponse<LogoutResponse> logout(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.success(authService.logout(userId));
     }
 }

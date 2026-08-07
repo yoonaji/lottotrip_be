@@ -2,23 +2,31 @@ package com.lottotrip.auth.controller;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.LogoutResponse;
 import com.lottotrip.auth.dto.RefreshRequest;
 import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.service.AuthService;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.common.exception.GlobalExceptionHandler;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -33,6 +41,7 @@ class AuthControllerTest {
 
     private static final String LOGIN_PATH = "/api/v1/auth/login";
     private static final String REFRESH_PATH = "/api/v1/auth/refresh";
+    private static final String LOGOUT_PATH = "/api/v1/auth/logout";
 
     private MockMvc mockMvc;
     private AuthService authService;
@@ -42,7 +51,29 @@ class AuthControllerTest {
         authService = mock(AuthService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
                 .setControllerAdvice(new GlobalExceptionHandler())
+                // @AuthenticationPrincipal로 userId를 꺼내려면 이 해석기가 필요하다.
+                // 실제 앱에서는 시큐리티가 자동으로 끼워 주지만, 이 테스트는 컨트롤러만 띄운다.
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        // 보관함은 스레드에 붙어 있어 테스트가 끝나도 남는다. 비우지 않으면 다음 테스트가
+        // 로그인된 상태로 시작한다.
+        SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * 로그인된 상태를 만든다.
+     *
+     * <p>{@code @AuthenticationPrincipal}은 요청에 담긴 principal이 아니라
+     * <b>{@code SecurityContextHolder}(현재 요청을 처리 중인 사람을 담아 두는 보관함)</b>를 본다.
+     * 실제 앱에서는 4-2의 JWT 필터가 채워 주지만, 이 테스트는 컨트롤러만 띄우므로 직접 넣는다.
+     */
+    private void authenticateAs(Long userId) {
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(userId, null, List.of()));
     }
 
     private String body(String provider, String providerToken) {
@@ -183,6 +214,35 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.error.code").value("AUTH_002"));
+    }
+
+    // ---------- 로그아웃 ----------
+
+    @Test
+    @DisplayName("로그아웃하면 200과 완료 메시지를 내려준다")
+    void logout_returnsMessage() throws Exception {
+        authenticateAs(1L);
+        given(authService.logout(1L)).willReturn(LogoutResponse.completed());
+
+        mockMvc.perform(post(LOGOUT_PATH))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.error").isEmpty())
+                .andExpect(jsonPath("$.data.message").value("로그아웃 완료"));
+    }
+
+    @Test
+    @DisplayName("로그아웃은 본문 없이 호출한다")
+    void logout_needsNoBody() throws Exception {
+        // 명세상 Body 없음. 본문을 요구하면 앱이 빈 JSON을 만들어 보내야 한다.
+        authenticateAs(1L);
+        given(authService.logout(1L)).willReturn(LogoutResponse.completed());
+
+        mockMvc.perform(post(LOGOUT_PATH))
+                .andExpect(status().isOk());
+
+        // 토큰에서 꺼낸 userId가 서비스로 그대로 넘어가야 한다. 본문으로 받지 않으므로 위조할 수 없다.
+        verify(authService).logout(1L);
     }
 
     // ---------- 그 밖의 매핑 ----------

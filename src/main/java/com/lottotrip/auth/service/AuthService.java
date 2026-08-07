@@ -2,6 +2,7 @@ package com.lottotrip.auth.service;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.LogoutResponse;
 import com.lottotrip.auth.dto.RefreshRequest;
 import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.entity.ProviderType;
@@ -24,10 +25,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 인증 서비스. (roadmap 4-3-3, 4-5)
+ * 인증 서비스. (roadmap 4-3-3, 4-5~4-7)
  *
- * <p>provider별 검증 구현체를 고르고, 검증된 사용자 정보로 로그인을 처리한다.
- * 토큰 갱신·로그아웃은 4-6~4-7에서 추가된다.
+ * <p>provider별 검증 구현체를 고르고, 로그인·토큰 갱신·로그아웃을 처리한다.
  */
 @Slf4j
 @Service
@@ -159,6 +159,24 @@ public class AuthService {
         }
 
         return new RefreshResponse(jwtProvider.createAccessToken(userId));
+    }
+
+    /**
+     * 로그아웃. (tour_api_erd.md 4-1)
+     *
+     * <p><b>서버가 할 일이 거의 없다.</b> 우리 토큰은 서버에 저장하지 않기로 했으므로(stateless),
+     * "이 토큰은 이제 무효"라고 표시할 곳이 없다. 이미 발급된 토큰은 만료될 때까지 그대로 유효하다.
+     * 실제 로그아웃은 <b>앱이 갖고 있는 토큰을 지우는 것</b>으로 이뤄진다.
+     *
+     * <p>그럼에도 이 API가 필요한 이유는 두 가지다. 앱 입장에서 "로그아웃 절차를 서버가 확인해 줬다"는
+     * 신호가 있어야 하고, 서버는 <b>누가 언제 로그아웃했는지를 기록</b>할 수 있다.
+     *
+     * <p>토큰을 진짜로 무효화하려면 발급한 토큰을 서버가 들고 있어야 한다(저장소 또는 블랙리스트).
+     * 그건 ERD에 없는 테이블을 요구하므로 이번 범위에서는 하지 않는다.
+     */
+    public LogoutResponse logout(Long userId) {
+        log.info("로그아웃: userId={}", userId);
+        return LogoutResponse.completed();
     }
 
     /**
