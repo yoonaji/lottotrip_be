@@ -46,6 +46,12 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+oauth:
+  kakao:
+    # 액세스 토큰으로 사용자 정보를 조회하는 카카오 API.
+    # 조회가 성공하면 토큰이 유효한 것이고, 401이면 유효하지 않은 것이다.
+    user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+
 jwt:
   secret: ${JWT_SECRET:}
   access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY:3600}
