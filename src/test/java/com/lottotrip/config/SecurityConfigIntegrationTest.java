@@ -54,8 +54,15 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
     @DisplayName("로그인·토큰 갱신은 토큰 없이 열려 있다")
     void authEntryPointsArePublic(String path) throws Exception {
         // 토큰을 받기 위한 API가 토큰을 요구하면 아무도 로그인할 수 없다.
+        //
+        // 확인할 것은 "시큐리티를 통과하는가"뿐이므로 401만 아니면 된다. 실제 상태 코드는
+        // 구현 여부에 따라 달라진다. 로그인(4-5)은 구현돼 있어 본문이 없으니 400,
+        // 토큰 갱신(4-6)은 아직 핸들러가 없어 404다. 둘 다 시큐리티는 지나온 것이다.
         mockMvc.perform(post(path))
-                .andExpect(status().isNotFound());   // 4-5·4-6 구현 후 200으로 바뀐다
+                .andExpect(result ->
+                        org.assertj.core.api.Assertions.assertThat(result.getResponse().getStatus())
+                                .as("인증이 필요 없는 경로여야 한다")
+                                .isNotEqualTo(401));
     }
 
     // ---------- 막힌 경로 ----------

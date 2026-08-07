@@ -52,7 +52,9 @@ class AuthServiceTest {
     }
 
     private AuthService newService(SocialTokenVerifier... verifiers) {
-        return new AuthService(List.of(verifiers));
+        // 이 테스트는 "구현체를 고르는가"만 본다. 저장소·JWT는 여기서 쓰이지 않으므로
+        // 가짜조차 만들지 않고 null로 둔다. 로그인 로직은 AuthServiceLoginTest가 본다.
+        return new AuthService(List.of(verifiers), null, null, null);
     }
 
     // ---------- 선택 ----------

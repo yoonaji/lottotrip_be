@@ -1,28 +1,40 @@
 package com.lottotrip.auth.service;
 
+import com.lottotrip.auth.dto.LoginRequest;
+import com.lottotrip.auth.dto.LoginResponse;
 import com.lottotrip.auth.entity.ProviderType;
+import com.lottotrip.auth.entity.SocialAuth;
+import com.lottotrip.auth.jwt.JwtProvider;
 import com.lottotrip.auth.oauth.OAuthUserInfo;
 import com.lottotrip.auth.oauth.SocialTokenVerifier;
+import com.lottotrip.auth.repository.SocialAuthRepository;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.user.entity.User;
+import com.lottotrip.user.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * 인증 서비스. (roadmap 4-3-3)
+ * 인증 서비스. (roadmap 4-3-3, 4-5)
  *
- * <p>현재는 provider별 검증 구현체를 고르는 일만 한다.
- * 로그인·토큰 갱신·로그아웃은 4-5~4-7에서 이 클래스에 추가된다.
+ * <p>provider별 검증 구현체를 고르고, 검증된 사용자 정보로 로그인을 처리한다.
+ * 토큰 갱신·로그아웃은 4-6~4-7에서 추가된다.
  */
 @Slf4j
 @Service
 public class AuthService {
 
     private final Map<ProviderType, SocialTokenVerifier> verifiers;
+    private final UserRepository userRepository;
+    private final SocialAuthRepository socialAuthRepository;
+    private final JwtProvider jwtProvider;
 
     /**
      * 스프링이 {@code SocialTokenVerifier}를 상속한 빈을 <b>전부 모아</b> 리스트로 넣어 준다.
@@ -33,8 +45,14 @@ public class AuthService {
      *
      * <p>참고: 생성자가 하나뿐이면 {@code @Autowired}를 생략해도 스프링이 알아서 주입한다.
      */
-    public AuthService(List<SocialTokenVerifier> verifierList) {
+    public AuthService(List<SocialTokenVerifier> verifierList,
+                       UserRepository userRepository,
+                       SocialAuthRepository socialAuthRepository,
+                       JwtProvider jwtProvider) {
         this.verifiers = toVerifierMap(verifierList);
+        this.userRepository = userRepository;
+        this.socialAuthRepository = socialAuthRepository;
+        this.jwtProvider = jwtProvider;
         log.info("소셜 로그인 구현체 {}개 등록: {}", verifiers.size(), verifiers.keySet());
     }
 
@@ -80,5 +98,63 @@ public class AuthService {
             throw new CustomException(ErrorCode.BAD_REQUEST);
         }
         return verifier.verify(providerToken);
+    }
+
+    /**
+     * 소셜 로그인. 없으면 가입시키고, 있으면 그대로 로그인시킨다. (tour_api_erd.md 4-1)
+     *
+     * <p>사람을 찾는 기준은 <b>{@code provider} + {@code providerUserId}</b>다. 이메일로 찾지 않는다.
+     * 이메일은 사용자가 바꿀 수 있고, 애플에서는 아예 오지 않을 수도 있기 때문이다.
+     *
+     * <p>{@code @Transactional}은 "이 메서드 안의 DB 작업을 전부 성공시키거나 전부 되돌린다"는 뜻이다.
+     * 신규 가입은 <b>회원 저장 + 소셜 계정 저장</b> 두 번의 INSERT인데, 둘 사이에서 실패하면
+     * 소셜 계정이 없는 회원이 남는다. 그 회원은 다시는 로그인으로 찾을 수 없는 유령이 된다.
+     */
+    @Transactional
+    public LoginResponse login(LoginRequest request) {
+        ProviderType provider = ProviderType.from(request.provider());
+        OAuthUserInfo userInfo = verifySocialToken(provider, request.providerToken());
+
+        Optional<SocialAuth> existing =
+                socialAuthRepository.findByProviderAndProviderUserId(provider, userInfo.providerUserId());
+
+        boolean isNewUser = existing.isEmpty();
+        User user = existing
+                .map(socialAuth -> loginExisting(socialAuth, request.providerToken()))
+                .orElseGet(() -> signUp(provider, userInfo, request.providerToken()));
+
+        return new LoginResponse(
+                jwtProvider.createAccessToken(user.getId()),
+                jwtProvider.createRefreshToken(user.getId()),
+                new LoginResponse.UserInfo(user.getId(), user.getNickname(), isNewUser));
+    }
+
+    /**
+     * 신규 가입 — 회원과 소셜 계정을 함께 만든다.
+     *
+     * <p>이름·이메일을 <b>반드시 이 시점에 저장</b>해야 한다. 애플·구글은 최초 1회만 주기 때문에
+     * 지금 버리면 두 번 다시 받을 수 없다. (tour_api_erd.md 결정 4)
+     */
+    private User signUp(ProviderType provider, OAuthUserInfo userInfo, String providerToken) {
+        User user = userRepository.save(
+                User.create(userInfo.email(), userInfo.nickname(), userInfo.profileImageUrl()));
+
+        socialAuthRepository.save(SocialAuth.create(
+                user, provider, userInfo.providerUserId(), providerToken, null));
+
+        log.info("신규 가입: userId={}, provider={}", user.getId(), provider);
+        return user;
+    }
+
+    /**
+     * 기존 로그인 — 소셜 토큰만 새 값으로 바꾼다.
+     *
+     * <p>{@code save()}를 부르지 않는 이유는, 트랜잭션 안에서 조회한 Entity는 JPA가 계속 지켜보고 있다가
+     * <b>값이 바뀐 것을 스스로 발견해</b> UPDATE를 날려 주기 때문이다(변경 감지).
+     * 트랜잭션이 끝나는 시점에 처음 읽었던 값과 비교해 달라진 것만 반영한다.
+     */
+    private User loginExisting(SocialAuth socialAuth, String providerToken) {
+        socialAuth.updateTokens(providerToken, socialAuth.getRefreshToken());
+        return socialAuth.getUser();
     }
 }
