@@ -2,6 +2,8 @@ package com.lottotrip.auth.controller;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.RefreshRequest;
+import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.service.AuthService;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
@@ -30,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuthControllerTest {
 
     private static final String LOGIN_PATH = "/api/v1/auth/login";
+    private static final String REFRESH_PATH = "/api/v1/auth/refresh";
 
     private MockMvc mockMvc;
     private AuthService authService;
@@ -138,6 +141,51 @@ class AuthControllerTest {
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.error.code").value("COMMON_503"));
     }
+
+    // ---------- 토큰 갱신 ----------
+
+    @Test
+    @DisplayName("토큰 갱신에 성공하면 200과 새 액세스 토큰을 내려준다")
+    void refresh_returnsNewAccessToken() throws Exception {
+        given(authService.refresh(any(RefreshRequest.class)))
+                .willReturn(new RefreshResponse("new-access-jwt"));
+
+        mockMvc.perform(post(REFRESH_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\": \"refresh-jwt\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.error").isEmpty())
+                .andExpect(jsonPath("$.data.accessToken").value("new-access-jwt"))
+                // 명세상 갱신 응답에는 액세스 토큰만 있다. 리프레시 토큰은 다시 내려주지 않는다.
+                .andExpect(jsonPath("$.data.refreshToken").doesNotExist());
+    }
+
+    @Test
+    @DisplayName("refreshToken이 없으면 400")
+    void refresh_rejectsMissingToken() throws Exception {
+        mockMvc.perform(post(REFRESH_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("COMMON_400"));
+    }
+
+    @Test
+    @DisplayName("리프레시 토큰이 유효하지 않으면 401 AUTH_002")
+    void refresh_mapsInvalidRefreshToken() throws Exception {
+        willThrow(new CustomException(ErrorCode.INVALID_REFRESH_TOKEN))
+                .given(authService).refresh(any(RefreshRequest.class));
+
+        mockMvc.perform(post(REFRESH_PATH)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"refreshToken\": \"expired\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("AUTH_002"));
+    }
+
+    // ---------- 그 밖의 매핑 ----------
 
     @Test
     @DisplayName("지원하지 않는 provider면 400 COMMON_400")

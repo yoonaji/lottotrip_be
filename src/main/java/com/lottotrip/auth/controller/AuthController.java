@@ -2,6 +2,8 @@ package com.lottotrip.auth.controller;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.RefreshRequest;
+import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.service.AuthService;
 import com.lottotrip.common.response.ApiResponse;
 import jakarta.validation.Valid;
@@ -33,5 +35,16 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success(authService.login(request));
+    }
+
+    /**
+     * 액세스 토큰 갱신. 이 경로도 인증이 필요 없다.
+     *
+     * <p>액세스 토큰이 만료돼서 부르는 API이므로, 유효한 액세스 토큰을 요구하면 앞뒤가 맞지 않는다.
+     * 신분 확인은 본문의 리프레시 토큰이 대신한다.
+     */
+    @PostMapping("/refresh")
+    public ApiResponse<RefreshResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ApiResponse.success(authService.refresh(request));
     }
 }

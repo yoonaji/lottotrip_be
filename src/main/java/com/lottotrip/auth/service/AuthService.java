@@ -2,6 +2,8 @@ package com.lottotrip.auth.service;
 
 import com.lottotrip.auth.dto.LoginRequest;
 import com.lottotrip.auth.dto.LoginResponse;
+import com.lottotrip.auth.dto.RefreshRequest;
+import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.entity.ProviderType;
 import com.lottotrip.auth.entity.SocialAuth;
 import com.lottotrip.auth.jwt.JwtProvider;
@@ -127,6 +129,36 @@ public class AuthService {
                 jwtProvider.createAccessToken(user.getId()),
                 jwtProvider.createRefreshToken(user.getId()),
                 new LoginResponse.UserInfo(user.getId(), user.getNickname(), isNewUser));
+    }
+
+    /**
+     * 액세스 토큰 갱신. (tour_api_erd.md 4-1)
+     *
+     * <p>액세스 토큰은 수명이 짧다(1시간). 만료될 때마다 소셜 로그인을 다시 시키면 사용자가 불편하므로,
+     * 수명이 긴 리프레시 토큰(2주)으로 <b>새 액세스 토큰만</b> 받아 간다.
+     *
+     * <p>이 서비스의 리프레시 토큰은 <b>서버에 저장하지 않는다(stateless).</b> 서명이 맞고 만료되지
+     * 않았으면 유효한 것으로 본다. 저장소가 필요 없어 단순하지만, <b>한 번 발급한 토큰을 중간에
+     * 무효화할 수 없다</b>는 뜻이기도 하다. 그래서 로그아웃(4-7)은 앱이 토큰을 지우는 것에 의존한다.
+     *
+     * <p>리프레시 토큰 자체는 새로 발급하지 않는다. 그래야 갱신을 반복해도 원래 만료 시점이 유지된다.
+     * 매번 새로 주면 사용자가 앱을 계속 쓰는 한 로그인 상태가 무한히 연장된다.
+     *
+     * <p>{@code readOnly = true}는 "이 트랜잭션은 읽기만 한다"는 표시다. JPA가 변경 감지를 위한
+     * 준비 작업을 건너뛰어 조금 가벼워지고, 실수로 쓰기가 섞이면 드러난다.
+     */
+    @Transactional(readOnly = true)
+    public RefreshResponse refresh(RefreshRequest request) {
+        Long userId = jwtProvider.getUserIdFromRefreshToken(request.refreshToken());
+
+        // 토큰이 진짜여도 그 회원이 아직 있는지는 별개다. 탈퇴한 회원의 토큰으로 계속 새
+        // 액세스 토큰이 나오면 안 된다. 저장하지 않는 구조라 토큰 자체를 막을 수 없으므로 여기서 본다.
+        if (!userRepository.existsById(userId)) {
+            log.debug("존재하지 않는 회원의 갱신 요청: userId={}", userId);
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        return new RefreshResponse(jwtProvider.createAccessToken(userId));
     }
 
     /**
