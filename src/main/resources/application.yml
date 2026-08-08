@@ -58,6 +58,17 @@ oauth:
     # ⚠️ iOS 클라이언트 ID 미확보 상태다. 비어 있으면 구글 로그인은 400으로 거절된다.
     audiences: ${GOOGLE_AUDIENCES:}
 
+tourapi:
+  # 한국관광공사 TourAPI (공공데이터포털). 5단계 장소 데이터 적재에만 쓴다.
+  base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
+  # ⚠️ 포털의 "일반 인증키(Decoding)" 값을 넣는다. 인코딩 값을 넣으면 이중 인코딩되어 인증에 실패한다.
+  #    비어 있으면 수집 기능만 꺼지고, 서버 기동과 나머지 API에는 영향이 없다.
+  service-key: ${TOUR_API_SERVICE_KEY:}
+  mobile-os: ETC
+  mobile-app: lottotrip
+  # 한 번에 받아올 건수. 크게 잡을수록 호출 횟수가 줄지만 응답이 무거워진다.
+  num-of-rows: ${TOUR_API_NUM_OF_ROWS:100}
+
 jwt:
   secret: ${JWT_SECRET:}
   access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY:3600}
