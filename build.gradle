@@ -21,6 +21,7 @@ dependencies {
     // 1. 기본 웹 및 유틸리티
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'  // STOMP 실시간 채팅
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
     compileOnly 'org.projectlombok:lombok'
@@ -35,7 +36,8 @@ dependencies {
 
     // 3. 운영/AWS 인프라 연동
     implementation 'org.springframework.boot:spring-boot-starter-actuator'   // 헬스체크
-    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:4.0.0'     // S3 연동 (Boot 4 호환 버전)
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:4.0.0'     // S3 연동 (presigner도 이 안에 포함, 별도 s3-presigner 아티팩트 없음)
+    implementation 'software.amazon.awssdk:polly:2.41.5'                    // TTS (숏폼 내레이션), s3 버전과 동일하게 고정
     // 필요 시: implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store:4.0.0'
 
     // 4. 보안 및 인증 (소셜 로그인 + 자체 JWT 발급)
@@ -50,6 +52,7 @@ dependencies {
 
     // 6. 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-jpa-test' // @DataJpaTest (Boot 4에서 별도 모듈로 분리됨)
     testImplementation 'org.springframework.security:spring-security-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
