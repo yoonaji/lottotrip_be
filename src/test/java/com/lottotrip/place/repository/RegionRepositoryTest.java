@@ -67,4 +67,47 @@ class RegionRepositoryTest extends PostgresContainerSupport {
         assertThat(cityRepository.findByStateIdAndCityName(gangwon.getId(), "고성군")).isPresent();
         assertThat(cityRepository.findByStateIdAndCityName(gyeongnam.getId(), "고성군")).isEmpty();
     }
+
+    // ---------- TourAPI 지역코드로 찾기 (5-8, 결정 10) ----------
+
+    @Test
+    @DisplayName("TourAPI 시도 코드로 광역 지역을 찾는다")
+    void findsStateByTourAreaCode() {
+        // 장소 적재는 지역을 코드로만 받는다. 이름으로는 이을 수 없다.
+        entityManager.persist(State.create("강원특별자치도", "32"));
+        entityManager.flush();
+
+        assertThat(stateRepository.findByTourAreaCode("32")).isPresent();
+        assertThat(stateRepository.findByTourAreaCode("39")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("광역 지역과 시군구 코드로 시·군을 찾는다")
+    void findsCityByStateAndTourSigunguCode() {
+        State gangwon = State.create("강원특별자치도", "32");
+        entityManager.persist(gangwon);
+        entityManager.persist(City.create(gangwon, "강릉시", "1"));
+        entityManager.flush();
+
+        assertThat(cityRepository.findByStateIdAndTourSigunguCode(gangwon.getId(), "1")).isPresent();
+        assertThat(cityRepository.findByStateIdAndTourSigunguCode(gangwon.getId(), "2")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("시군구 코드는 시·도를 함께 봐야 한다 — 코드만으로 찾으면 엉뚱한 지역이 나온다")
+    void requiresStateWhenLookingUpSigunguCode() {
+        // 강원의 1은 강릉시, 서울의 1은 강남구다. 코드만으로 찾으면 강남구 장소가 강릉에 붙는다.
+        State gangwon = State.create("강원특별자치도", "32");
+        State seoul = State.create("서울특별시", "1");
+        entityManager.persist(gangwon);
+        entityManager.persist(seoul);
+        entityManager.persist(City.create(gangwon, "강릉시", "1"));
+        entityManager.persist(City.create(seoul, "강남구", "1"));
+        entityManager.flush();
+
+        assertThat(cityRepository.findByStateIdAndTourSigunguCode(gangwon.getId(), "1"))
+                .get().extracting(City::getCityName).isEqualTo("강릉시");
+        assertThat(cityRepository.findByStateIdAndTourSigunguCode(seoul.getId(), "1"))
+                .get().extracting(City::getCityName).isEqualTo("강남구");
+    }
 }
