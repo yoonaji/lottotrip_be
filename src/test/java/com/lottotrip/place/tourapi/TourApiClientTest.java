@@ -76,8 +76,54 @@ class TourApiClientTest {
             """;
 
     /**
+     * 좌표 기반 목록 정상 응답 1건. (5-2)
+     *
+     * <p><b>이것은 가정이 아니라 2026-08-08에 실제 API에서 받아온 응답이다.</b>
+     * 강릉 숙소 좌표(37.7519, 128.8761) 반경 20km로 호출한 결과의 첫 항목이며, 필드 구성을 그대로 옮겼다.
+     *
+     * <p>여기서 두 가지가 드러난다.
+     * <ul>
+     *   <li>{@code dist} — 요청 좌표로부터의 거리(미터)를 API가 계산해 준다.</li>
+     *   <li>{@code contenttypeid: "32"}(숙박) — 필터 없이 뽑으면 모텔이 여행지로 나온다는 증거다.</li>
+     * </ul>
+     */
+    private static final String LOCATION_BASED_LIST = """
+            {
+              "response": {
+                "header": { "resultCode": "0000", "resultMsg": "OK" },
+                "body": {
+                  "items": {
+                    "item": [
+                      {
+                        "contentid": "3535323",
+                        "contenttypeid": "32",
+                        "title": "에쿠스모텔",
+                        "addr1": "강원특별자치도 강릉시 홍제로85번길 34 (홍제동)",
+                        "addr2": "",
+                        "areacode": "32",
+                        "sigungucode": "1",
+                        "cat1": "B02", "cat2": "B0201", "cat3": "B02010900",
+                        "dist": "442.3427319744332",
+                        "firstimage": "",
+                        "firstimage2": "",
+                        "mapx": "128.8807486691",
+                        "mapy": "37.7533209621"
+                      }
+                    ]
+                  },
+                  "numOfRows": 100,
+                  "pageNo": 1,
+                  "totalCount": 768
+                }
+              }
+            }
+            """;
+
+    /**
      * 결과가 0건일 때의 응답. <b>{@code items}가 객체가 아니라 빈 문자열로 온다.</b>
      * 공공데이터포털 계열 API의 알려진 특성이라 반드시 견뎌야 한다.
+     *
+     * <p>✅ 2026-08-08 실물 호출로 확인됨 — 5-1 작성 시점의 가정이 실제와 일치했다.
      */
     private static final String EMPTY_ITEMS = """
             {
@@ -453,6 +499,170 @@ class TourApiClientTest {
 
         assertThat(found.get(0).name()).isEqualTo("종로구");
         mockServer.verify();
+    }
+
+    // ---------- 좌표 기반 목록 (5-2) ----------
+
+    @Test
+    @DisplayName("좌표 기반 목록을 항목 리스트로 변환한다")
+    void mapsLocationBasedList() {
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page =
+                client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1);
+
+        assertThat(page.items()).hasSize(1);
+        TourApiPlaceItem item = page.items().get(0);
+        assertThat(item.contentId()).isEqualTo("3535323");
+        assertThat(item.title()).isEqualTo("에쿠스모텔");
+        assertThat(item.areaCode()).isEqualTo("32");
+        assertThat(item.sigunguCode()).isEqualTo("1");
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("응답의 dist를 거리(미터)로 읽는다 — 우리가 거리를 계산하지 않는다")
+    void readsDistanceFromResponse() {
+        // locationBasedList2는 요청 좌표로부터의 거리를 dist(미터)로 준다.
+        // 직접 Haversine을 구현하면 API가 이미 준 값과 미세하게 어긋나 정렬 순서가 뒤집힐 수 있다.
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        TourApiPlaceItem item = client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1)
+                .items().get(0);
+
+        assertThat(item.distanceMeters()).isEqualTo(442.3427319744332);
+    }
+
+    @Test
+    @DisplayName("dist가 숫자가 아니면 예외 대신 null이다")
+    void returnsNullDistanceWhenNotNumeric() {
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST.replace("442.3427319744332", ""),
+                        MediaType.APPLICATION_JSON));
+
+        TourApiPlaceItem item = client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1)
+                .items().get(0);
+
+        assertThat(item.distanceMeters()).isNull();
+    }
+
+    @Test
+    @DisplayName("경도를 mapX에, 위도를 mapY에 싣는다")
+    void sendsLongitudeAsMapXAndLatitudeAsMapY() {
+        // ⚠️ 이 테스트가 5-2에서 가장 중요하다. 뒤집어 보내면 API는 오류 대신 정상 응답
+        // (0건 또는 엉뚱한 장소)을 주기 때문에, 틀려도 드러나지 않고 결과만 조용히 이상해진다.
+        mockServer.expect(requestTo(containsString("mapX=128.8761")))
+                .andExpect(requestTo(containsString("mapY=37.7519")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("반경은 미터 단위로 싣는다")
+    void sendsRadiusInMeters() {
+        // 우리 도메인은 km로 말하지만(walk 1km / car 20km) API는 미터를 받는다.
+        // 20을 그대로 보내면 반경 20m가 되어 후보가 0건이 된다.
+        mockServer.expect(requestTo(containsString("radius=20000")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("거리순 정렬(arrange=E)로 요청한다")
+    void sendsDistanceArrange() {
+        // 가까운 곳부터 받아야 페이지를 끝까지 넘기지 않고도 쓸 만한 후보를 확보할 수 있다.
+        mockServer.expect(requestTo(containsString("arrange=E")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("contentTypeId를 주면 종류를 좁혀 요청한다")
+    void sendsContentTypeIdWhenGiven() {
+        // 필터가 없으면 숙박·음식점이 여행지로 뽑힌다. (실측: 100건 중 음식점 71 · 숙박 17)
+        mockServer.expect(requestTo(containsString("contentTypeId=12")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 20000, "12", 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("contentTypeId가 없으면 파라미터를 아예 빼고 요청한다")
+    void omitsContentTypeIdWhenNull() {
+        // 빈 값으로 보내면 API가 "종류 없음"으로 해석해 0건을 줄 수 있다. 아예 빼는 편이 안전하다.
+        mockServer.expect(requestTo(not(containsString("contentTypeId"))))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("반경이 API 상한(20km)을 넘으면 호출하지 않고 거절한다")
+    void rejectsRadiusAboveApiLimit() {
+        // TourAPI의 radius 상한이 20000m다. 넘겨도 오류 없이 조용히 잘린 결과가 오므로
+        // "반경 50km로 뽑았다"고 착각하게 된다. 우리가 먼저 막는다.
+        assertThatThrownBy(() -> client.fetchLocationBasedList(37.7519, 128.8761, 20001, null, 1))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("20000");
+
+        mockServer.verify(); // 요청이 나가지 않았다
+    }
+
+    @Test
+    @DisplayName("반경이 0 이하면 거절한다")
+    void rejectsNonPositiveRadius() {
+        assertThatThrownBy(() -> client.fetchLocationBasedList(37.7519, 128.8761, 0, null, 1))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("반경 안에 아무것도 없으면 빈 리스트다 — 0건을 어떻게 다룰지는 부르는 쪽 몫")
+    void returnsEmptyWhenNothingInRadius() {
+        // 실측으로 확인한 응답이다. 0건이면 items가 객체가 아니라 빈 문자열로 온다.
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(EMPTY_ITEMS, MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page =
+                client.fetchLocationBasedList(36.0, 130.5, 1000, null, 1);
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.totalCount()).isZero();
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("좌표 기반 목록도 실패 코드는 SERVICE_UNAVAILABLE로 모은다")
+    void failsOnErrorResultCodeForLocationBasedList() {
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess("""
+                        {
+                          "response": {
+                            "header": { "resultCode": "22", "resultMsg": "LIMITED_NUMBER_OF_SERVICE_REQUESTS_EXCEEDS_ERROR" }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.fetchLocationBasedList(37.7519, 128.8761, 20000, null, 1))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.SERVICE_UNAVAILABLE);
     }
 
     // ---------- 헬퍼 ----------

@@ -44,6 +44,7 @@ import java.util.Optional;
 public class TourApiClient {
 
     private static final String OP_AREA_BASED_LIST = "areaBasedList2";
+    private static final String OP_LOCATION_BASED_LIST = "locationBasedList2";
     private static final String OP_DETAIL_COMMON = "detailCommon2";
     private static final String OP_DETAIL_IMAGE = "detailImage2";
     private static final String OP_AREA_CODE = "areaCode2";
@@ -55,6 +56,25 @@ public class TourApiClient {
      * 그러면 같은 장소를 두 번 받거나 아예 놓친다. 순서를 고정해야 페이지 반복이 믿을 만해진다.
      */
     private static final String ARRANGE_BY_TITLE = "A";
+
+    /**
+     * 좌표 기반 목록의 정렬 기준(E = 거리순).
+     *
+     * <p>가까운 곳부터 받으므로, 페이지를 끝까지 넘기지 않아도 쓸 만한 후보를 확보할 수 있다.
+     */
+    private static final String ARRANGE_BY_DISTANCE = "E";
+
+    /**
+     * {@code locationBasedList2}의 반경 상한(미터).
+     *
+     * <p>이 값을 넘겨도 API는 오류를 주지 않고 <b>조용히 잘린 결과</b>를 준다.
+     * 그러면 "반경 50km로 뽑았다"고 착각한 채 20km 안의 장소만 받게 되므로 우리가 먼저 막는다.
+     *
+     * <p>⚠️ <b>우리 도메인의 반경과 어긋난다.</b> {@code TransportType}은 {@code CAR}에 30km를 주는데
+     * 이 API는 20km까지만 받는다. 지금은 추첨이 DB에서 이뤄져(결정 10) 부딪히지 않지만,
+     * 이 메서드를 추첨 경로에 다시 끌어들이면 30km 요청이 그 자리에서 거절된다.
+     */
+    static final int MAX_RADIUS_METERS = 20_000;
 
     /** 지역 코드 조회는 건수가 적다(시도 17개, 시군구 최대 수십 개). 한 번에 받아 온다. */
     private static final int AREA_CODE_ROWS = 100;
@@ -123,6 +143,69 @@ public class TourApiClient {
                 call(uri, new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
                 });
         return TourApiPage.from(response);
+    }
+
+    /**
+     * 좌표 기반 관광 정보 목록. (roadmap 5-2)
+     *
+     * <p>⚠️ <b>현재 어느 경로에서도 호출하지 않는다.</b> 결정 8(온디맨드) 시절에는 이 메서드가
+     * 슬롯 추첨의 후보를 받아오는 핵심이었으나, 결정 10으로 추첨이 DB 조회로 바뀌면서 자리를 잃었다.
+     * 배치 적재는 {@code areaBasedList2}를, 세부조회는 {@code detailCommon2}를 쓴다.
+     *
+     * <p><b>지우지 않고 남겨 둔 이유:</b> 적재 범위가 강원 한정이라 <b>강원 밖 좌표로 슬롯을 돌리면
+     * DB에 후보가 하나도 없다.</b> 그때 실시간으로 후보를 받아오는 폴백이 필요해질 수 있다.
+     * 다만 이 API의 반경 상한이 20km라 {@code CAR}(30km)를 그대로 태울 수는 없다.
+     *
+     * <p>응답의 {@code dist}가 요청 좌표로부터의 거리(미터)라 거리 계산을 따로 하지 않아도 된다.
+     *
+     * <p>⚠️ <b>{@code mapX}에 경도, {@code mapY}에 위도를 넣는다.</b> 수학 좌표계의 x·y라서
+     * 흔히 쓰는 "위도·경도" 순서와 반대다. 뒤집어 보내도 API는 오류 대신 0건이나 엉뚱한 장소를
+     * 정상 응답으로 주기 때문에, 틀려도 드러나지 않고 추첨 결과만 조용히 이상해진다.
+     *
+     * @param latitude      기준 위도 (숙소 좌표)
+     * @param longitude     기준 경도
+     * @param radiusMeters  반경(미터). 우리 도메인은 km로 말하므로 부르는 쪽이 1000을 곱해 넘긴다
+     * @param contentTypeId 관광 타입 코드(12=관광지, 39=음식점 …). null이면 종류를 가리지 않는다
+     * @param pageNo        1부터 시작하는 페이지 번호
+     */
+    public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
+            double latitude, double longitude, int radiusMeters, String contentTypeId, int pageNo) {
+
+        requireValidRadius(radiusMeters);
+
+        Map<String, Object> params = params(
+                "numOfRows", properties.numOfRows(),
+                "pageNo", pageNo,
+                "mapX", longitude,   // x = 경도
+                "mapY", latitude,    // y = 위도
+                "radius", radiusMeters,
+                "arrange", ARRANGE_BY_DISTANCE);
+
+        // 빈 값으로 보내면 API가 "종류 없음"으로 해석해 0건을 줄 수 있다. 없으면 아예 뺀다.
+        if (contentTypeId != null && !contentTypeId.isBlank()) {
+            params.put("contentTypeId", contentTypeId);
+        }
+
+        TourApiResponse<TourApiPlaceItem> response =
+                call(uri(OP_LOCATION_BASED_LIST, params),
+                        new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
+                        });
+        return TourApiPage.from(response);
+    }
+
+    /**
+     * 반경이 API가 받아들이는 범위인지 확인한다.
+     *
+     * <p>{@code CustomException}이 아니라 {@link IllegalArgumentException}인 이유는
+     * {@link #requireConfigured()}와 같다. 반경은 사용자가 보내는 값이 아니라 <b>우리가 정하는 값</b>이므로,
+     * 범위를 벗어났다면 사용자 입력이 잘못된 것이 아니라 <b>우리 코드의 잘못</b>이다.
+     * 사용자에게 보여줄 에러가 아니라 개발 중에 터져야 하는 신호다.
+     */
+    private void requireValidRadius(int radiusMeters) {
+        if (radiusMeters <= 0 || radiusMeters > MAX_RADIUS_METERS) {
+            throw new IllegalArgumentException(
+                    "반경은 1 이상 " + MAX_RADIUS_METERS + " 이하(미터)여야 합니다: " + radiusMeters);
+        }
     }
 
     /**

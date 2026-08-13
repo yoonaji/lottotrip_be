@@ -29,8 +29,24 @@ public record TourApiPlaceItem(
         @JsonProperty("firstimage") String firstImage,
         @JsonProperty("firstimage2") String firstImage2,
         String mapx,
-        String mapy
+        String mapy,
+        String dist
 ) {
+
+    /**
+     * 요청 좌표로부터의 거리(미터). <b>좌표 기반 조회에서만 채워진다.</b>
+     *
+     * <p>좌표 기반 조회를 쓸 때는 이 값을 그대로 쓴다. 같은 응답의 정렬 순서(가까운 순)가 이 값 기준이라,
+     * 우리가 따로 계산하면 지구 반지름 상수나 반올림 차이로 순서와 미세하게 어긋날 수 있기 때문이다.
+     *
+     * <p>⚠️ <b>슬롯 추첨은 이 값을 쓰지 않는다.</b> 결정 10으로 추첨이 DB 조회로 바뀌어
+     * 받아올 응답 자체가 없다. 추첨의 {@code distanceKm}는 우리가 Haversine으로 직접 계산한다.
+     *
+     * <p>지역 기반 조회({@code areaBasedList2})에는 이 필드가 없으므로 null이다.
+     */
+    public Double distanceMeters() {
+        return toDouble(dist);
+    }
 
     /**
      * 위도. <b>{@code mapy}에서 온다.</b>
