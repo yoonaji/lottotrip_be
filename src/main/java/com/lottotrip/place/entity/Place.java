@@ -171,6 +171,27 @@ public class Place {
      * 컴파일이 통과하고, 하필 {@code contentId}는 세부조회의 호출 키라 잘못 들어가면
      * 그 장소는 영영 조회되지 않는다. 이름을 붙이면 이 실수가 원천적으로 불가능하다.
      */
+    /**
+     * TourAPI에서 다시 받아온 값으로 갱신한다. 적재 배치가 <b>이미 담은 장소를 만났을 때</b> 쓴다.
+     *
+     * <p>새로 만든 {@code Place}를 통째로 받는 이유는 인자를 하나씩 나열하면 다시 12개가 되기 때문이다.
+     * 배치는 어차피 응답 항목으로 {@code Place}를 한 번 조립하므로, 그걸 그대로 넘기면 된다.
+     *
+     * <p><b>{@code contentId}는 바꾸지 않는다.</b> 이 행이 어느 장소인지 정하는 값이라
+     * 바뀌면 다른 장소가 되어 버린다. {@code createdAt}도 우리 DB에 처음 담긴 시각이라 그대로 둔다.
+     */
+    public void updateFrom(Place source) {
+        this.contentTypeId = source.contentTypeId;
+        this.city = source.city;
+        this.name = source.name;
+        this.description = source.description;
+        this.category = source.category;
+        this.address = source.address;
+        this.latitude = source.latitude;
+        this.longitude = source.longitude;
+        this.modifiedTime = source.modifiedTime;
+    }
+
     @Builder
     private Place(String contentId, String contentTypeId, City city, String name, String description,
                   TravelCategory category, String address, Double latitude, Double longitude,

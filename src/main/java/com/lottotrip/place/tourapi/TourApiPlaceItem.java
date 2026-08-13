@@ -3,6 +3,10 @@ package com.lottotrip.place.tourapi;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+
 /**
  * 지역 기반 관광 정보 목록의 항목 하나. (roadmap 5-1)
  *
@@ -30,8 +34,32 @@ public record TourApiPlaceItem(
         @JsonProperty("firstimage2") String firstImage2,
         String mapx,
         String mapy,
-        String dist
+        String dist,
+        @JsonProperty("modifiedtime") String modifiedTime
 ) {
+
+    /** TourAPI의 수정일시 형식. {@code "20240115103045"}처럼 구분자 없이 붙여서 온다. */
+    private static final DateTimeFormatter MODIFIED_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+
+    /**
+     * 이 장소 정보가 TourAPI 쪽에서 마지막으로 바뀐 시각.
+     *
+     * <p>정기 갱신 배치가 <b>무엇을 다시 받을지</b> 고르는 기준이다. 목록 조회는 싸고(14회)
+     * 상세 조회가 비싸므로(1,241회), 목록만 훑어 이 값을 비교하고 바뀐 것만 상세를 다시 받는다.
+     *
+     * <p>형식이 어긋나면 예외 대신 null을 준다. 수정일시 하나 때문에 장소를 통째로 버릴 이유가 없다.
+     */
+    public LocalDateTime modifiedDateTime() {
+        if (modifiedTime == null || modifiedTime.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDateTime.parse(modifiedTime.trim(), MODIFIED_TIME_FORMAT);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
+    }
 
     /**
      * 요청 좌표로부터의 거리(미터). <b>좌표 기반 조회에서만 채워진다.</b>
