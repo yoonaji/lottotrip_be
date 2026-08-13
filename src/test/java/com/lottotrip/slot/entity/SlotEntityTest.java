@@ -36,13 +36,29 @@ class SlotEntityTest extends PostgresContainerSupport {
         return user;
     }
 
+    /** 한 테스트에서 장소를 여러 개 만들 수 있다. content_id는 UNIQUE라 매번 다른 값이어야 한다. */
+    private int contentSeq = 0;
+
+    private String nextContentId() {
+        return "TEST-" + (++contentSeq);
+    }
+
     private Place persistedPlace(String name) {
         State state = State.create("강원특별자치도");
         entityManager.persist(state);
         City city = City.create(state, "강릉시");
         entityManager.persist(city);
-        Place place = Place.create(city, name, null, TravelCategory.BEACH,
-                "강원 강릉시", 37.8021, 128.8954, BudgetLevel.LOW, 3);
+        Place place = Place.builder()
+                .contentId(nextContentId())
+                .city(city)
+                .name(name)
+                .category(TravelCategory.BEACH)
+                .address("강원 강릉시")
+                .latitude(37.8021)
+                .longitude(128.8954)
+                .budgetTier(BudgetLevel.LOW)
+                .publicTransportWeight(3)
+                .build();
         entityManager.persist(place);
         return place;
     }

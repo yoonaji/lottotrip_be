@@ -13,7 +13,9 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
@@ -36,16 +38,48 @@ import java.time.LocalDateTime;
         name = "places",
         // 반경 검색은 "위도·경도 사각형 범위로 후보를 좁힌 뒤 정확한 거리를 계산"하는 방식이다.
         // 1차 필터가 인덱스를 타지 못하면 장소가 늘어날수록 전체를 훑게 된다.
-        indexes = @Index(name = "idx_places_coordinate", columnList = "latitude, longitude")
+        indexes = @Index(name = "idx_places_coordinate", columnList = "latitude, longitude"),
+        uniqueConstraints = @UniqueConstraint(name = "uk_places_content_id", columnNames = "content_id")
 )
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Place {
 
+    /**
+     * 우리 DB가 채번하는 식별자. {@code saved_slots}·{@code course_items}·{@code missions}가 이 값을 참조하고,
+     * API 응답의 {@code placeId}로 나간다.
+     *
+     * <p>⚠️ {@link #contentId}와 <b>다른 값이다.</b> 이쪽은 우리가, 저쪽은 TourAPI가 부여한다.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "place_id")
     private Long id;
+
+    /**
+     * TourAPI 장소 코드({@code contentid}). <b>세부조회의 유일한 호출 키다.</b> (roadmap 5-7, 결정 10)
+     *
+     * <p>{@code GET /slot/results/&#123;slotId&#125;}가 이 값으로 {@code detailCommon2}를 불러
+     * 설명·이미지를 실시간으로 받아 온다. 저장해 두지 않으면 <b>적재한 장소를 TourAPI에서 다시 찾을 방법이 없다.</b>
+     * 장소명으로 재검색하는 방법은 동명 장소를 구분하지 못하고 호출도 2배가 된다.
+     *
+     * <p><b>UNIQUE인 이유:</b> 배치는 여러 번 돈다(초기 적재 실패 후 재시도, 정기 갱신).
+     * 제약이 없으면 같은 장소가 두 행으로 쌓이고, <b>추첨에서 그 장소가 두 배 확률로 뽑힌다.</b>
+     * 조회 후 저장만으로는 배치를 두 개 동시에 돌릴 때 둘 다 통과하므로 DB 차원에서 막는다.
+     */
+    @Column(name = "content_id", nullable = false, length = 20)
+    private String contentId;
+
+    /**
+     * TourAPI 관광타입 코드({@code contenttypeid}). 12=관광지, 14=문화시설, 39=음식점 …
+     *
+     * <p>{@code detailIntro2}는 {@link #contentId}만으로는 부족하고 이 값을 <b>함께</b> 요구한다.
+     * {@link #category}를 정한 근거이기도 해서, 나중에 매핑 규칙을 바꿀 때 다시 계산할 수 있다.
+     *
+     * <p>응답에 나가지 않고 비어도 슬롯이 성립하므로 nullable로 둔다.
+     */
+    @Column(name = "content_type_id", length = 10)
+    private String contentTypeId;
 
     /**
      * 소속 시·군. <b>배치가 채운다.</b> (roadmap 5-8)
@@ -110,12 +144,39 @@ public class Place {
     @Column(name = "public_transport_weight")
     private Integer publicTransportWeight;
 
+    /**
+     * TourAPI가 알려주는 <b>장소 정보의 최종 수정일시</b>({@code modifiedtime}).
+     *
+     * <p>정기 갱신 배치가 "무엇을 다시 받을지" 고르는 기준이다. 목록 조회는 싸고(14회) 상세 조회가
+     * 비싸므로(1,241회), 목록만 훑어 이 값을 비교하고 <b>바뀐 것만</b> 상세를 다시 받는다.
+     *
+     * <p><b>아직 쓰지 않지만 첫 적재부터 담는다.</b> 나중에 컬럼을 추가하면 이미 적재된 행은 값이 비어
+     * 비교할 대상이 없고, 결국 전체를 다시 받아야 한다. 지금 담아 두는 비용은 컬럼 하나다.
+     *
+     * <p>⚠️ {@link #createdAt}과 다른 값이다. 이쪽은 <b>TourAPI 쪽에서</b> 장소 정보가 바뀐 시각이고,
+     * {@code createdAt}은 <b>우리 DB에</b> 행이 들어온 시각이다.
+     */
+    @Column(name = "modified_time")
+    private LocalDateTime modifiedTime;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    private Place(City city, String name, String description, TravelCategory category, String address,
-                  Double latitude, Double longitude, BudgetLevel budgetTier, Integer publicTransportWeight) {
+    /**
+     * 인자를 위치가 아니라 <b>이름으로</b> 받는다.
+     *
+     * <p>필드가 11개인데 그중 {@code name}·{@code description}·{@code address}·{@code contentId}·
+     * {@code contentTypeId} 다섯이 전부 {@code String}이다. 위치로 받으면 순서를 바꿔 넣어도
+     * 컴파일이 통과하고, 하필 {@code contentId}는 세부조회의 호출 키라 잘못 들어가면
+     * 그 장소는 영영 조회되지 않는다. 이름을 붙이면 이 실수가 원천적으로 불가능하다.
+     */
+    @Builder
+    private Place(String contentId, String contentTypeId, City city, String name, String description,
+                  TravelCategory category, String address, Double latitude, Double longitude,
+                  BudgetLevel budgetTier, Integer publicTransportWeight, LocalDateTime modifiedTime) {
+        this.contentId = contentId;
+        this.contentTypeId = contentTypeId;
         this.city = city;
         this.name = name;
         this.description = description;
@@ -125,12 +186,6 @@ public class Place {
         this.longitude = longitude;
         this.budgetTier = budgetTier;
         this.publicTransportWeight = publicTransportWeight;
-    }
-
-    public static Place create(City city, String name, String description, TravelCategory category, String address,
-                               Double latitude, Double longitude, BudgetLevel budgetTier,
-                               Integer publicTransportWeight) {
-        return new Place(city, name, description, category, address,
-                latitude, longitude, budgetTier, publicTransportWeight);
+        this.modifiedTime = modifiedTime;
     }
 }

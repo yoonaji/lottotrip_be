@@ -80,8 +80,17 @@ class RepositoryRegistrationTest extends PostgresContainerSupport {
     void savesFindsAndDeletesPlace() {
         State state = stateRepository.save(State.create("강원특별자치도"));
         City city = cityRepository.save(City.create(state, "강릉시"));
-        Place saved = placeRepository.save(Place.create(city, "사천진해변", null, TravelCategory.BEACH,
-                "강원 강릉시", 37.8021, 128.8954, BudgetLevel.LOW, 3));
+        Place saved = placeRepository.save(Place.builder()
+                .contentId("3535323")
+                .city(city)
+                .name("사천진해변")
+                .category(TravelCategory.BEACH)
+                .address("강원 강릉시")
+                .latitude(37.8021)
+                .longitude(128.8954)
+                .budgetTier(BudgetLevel.LOW)
+                .publicTransportWeight(3)
+                .build());
 
         assertThat(placeRepository.findById(saved.getId())).isPresent();
 
