@@ -68,6 +68,12 @@ tourapi:
   mobile-app: lottotrip
   # 한 번에 받아올 건수. 크게 잡을수록 호출 횟수가 줄지만 응답이 무거워진다.
   num-of-rows: ${TOUR_API_NUM_OF_ROWS:100}
+  # 기동할 때 지역·장소 시드를 돌릴지. 기본은 끔.
+  # 적재는 공공 API를 수백~수천 번 부르므로, 켜 두면 서버를 띄울 때마다 할당량이 깎인다.
+  # 돌릴 때만 켠다:  SEED_ON_STARTUP=true ./gradlew bootRun
+  seed-on-startup: ${SEED_ON_STARTUP:false}
+  # 시드 대상 시도 코드. 강원 = 32 (결정 10 — 적재 범위는 강원 한정)
+  seed-area-code: ${SEED_AREA_CODE:32}
 
 jwt:
   secret: ${JWT_SECRET:}
