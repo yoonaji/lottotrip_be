@@ -19,10 +19,19 @@ import java.util.Arrays;
 @AllArgsConstructor
 public enum TransportType {
 
-    WALK(1),
-    CAR(20);
+    WALK(10),
+    CAR(30);
 
-    /** 이 이동수단으로 움직인다고 볼 때 탐색할 반경(km). (tour_api_erd.md 결정 2) */
+    /**
+     * 이 이동수단으로 움직인다고 볼 때 탐색할 반경(km). (tour_api_erd.md 결정 2)
+     *
+     * <p><b>반경 값이 이 두 숫자에만 존재한다.</b> 2026-08-13 회의에서 1/20km → 10/30km로 올릴 때
+     * 고친 곳도 여기뿐이다. 바꾼 이유는 실측상 강릉 시내 1km 안에 장소가 7건(관광지는 1건)밖에 없어
+     * {@code NO_PLACE_FOUND}가 사실상 기본 응답이 될 상황이었기 때문이다.
+     *
+     * <p>{@code WALK}은 도보가 아니라 <b>택시 기준</b>으로 재해석한 값이다.
+     * {@code CAR}는 "10km 이상은 자차"라는 회의 결론에 따라 10/20/30 중 가장 넓은 값을 택했다.
+     */
     private final int searchRadiusKm;
 
     /**

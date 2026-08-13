@@ -51,10 +51,12 @@ class TransportTypeTest {
     }
 
     @ParameterizedTest(name = "{0} → {1}km")
-    @CsvSource({"WALK, 1", "CAR, 20"})
+    @CsvSource({"WALK, 10", "CAR, 30"})
     @DisplayName("이동수단마다 검색 반경이 정해져 있다")
     void hasSearchRadius(TransportType transport, int expectedKm) {
-        // 결정 2: walk → 1km, car → 20km. 요청으로 받지 않고 백엔드가 정한다.
+        // 결정 2: 반경은 요청으로 받지 않고 백엔드가 이동수단에서 정한다.
+        // 2026-08-13 회의로 1/20km → 10/30km. 강릉 시내 1km 안에 장소가 7건뿐이라
+        // NO_PLACE_FOUND가 기본 응답이 될 상황이었다. walk는 택시 기준으로 재해석했다.
         assertThat(transport.getSearchRadiusKm()).isEqualTo(expectedKm);
     }
 }

@@ -71,8 +71,8 @@ class SlotEntityTest extends PostgresContainerSupport {
         TripSession walking = TripSession.create(persistedUser(), BudgetLevel.LOW, TransportType.WALK, 37.0, 128.0);
         TripSession driving = TripSession.create(persistedUser(), BudgetLevel.LOW, TransportType.CAR, 37.0, 128.0);
 
-        assertThat(walking.getSearchRadiusKm()).isEqualTo(1);
-        assertThat(driving.getSearchRadiusKm()).isEqualTo(20);
+        assertThat(walking.getSearchRadiusKm()).isEqualTo(10);
+        assertThat(driving.getSearchRadiusKm()).isEqualTo(30);
     }
 
     @Test
