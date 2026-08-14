@@ -3,10 +3,14 @@ package com.lottotrip.slot.controller;
 import com.lottotrip.common.response.ApiResponse;
 import com.lottotrip.slot.dto.SlotDrawRequest;
 import com.lottotrip.slot.dto.SlotDrawResponse;
+import com.lottotrip.slot.dto.SlotResultResponse;
+import com.lottotrip.slot.service.SlotResultService;
 import com.lottotrip.slot.service.SlotService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class SlotController {
 
     private final SlotService slotService;
+    private final SlotResultService slotResultService;
 
     /**
      * 슬롯 돌리기. 랜덤 여행지 한 곳과 미션을 발급한다.
@@ -38,5 +43,20 @@ public class SlotController {
     public ApiResponse<SlotDrawResponse> draw(@AuthenticationPrincipal Long userId,
                                               @Valid @RequestBody SlotDrawRequest request) {
         return ApiResponse.success(slotService.draw(userId, request));
+    }
+
+    /**
+     * 슬롯 결과 조회. <b>룰렛 세부사항 조회를 겸한다.</b> (결정 10)
+     *
+     * <p>이 요청이 들어올 때 TourAPI를 <b>실시간으로</b> 부른다. 결정 10으로 추첨이 DB에서만
+     * 이뤄지므로, <b>사용자 요청에 반응해 공공데이터를 호출하는 지점은 여기 하나뿐이다.</b>
+     *
+     * <p>남의 슬롯을 조회하면 403이 아니라 404로 답한다. 403은 "그 번호는 존재한다"를
+     * 알려 주는 셈이라 번호를 훑어 남의 기록을 세어 볼 수 있다.
+     */
+    @GetMapping("/results/{slotId}")
+    public ApiResponse<SlotResultResponse> getResult(@AuthenticationPrincipal Long userId,
+                                                     @PathVariable Long slotId) {
+        return ApiResponse.success(slotResultService.getResult(userId, slotId));
     }
 }
