@@ -13,7 +13,7 @@ import java.util.Arrays;
  * <p>검색 반경을 enum이 직접 갖는다. ERD 2-2는 서비스에 {@code resolveRadiusKm(String)}을 두는
  * 형태로 예시를 적어 두었지만, 그렇게 하면 "이동수단"과 "그 이동수단의 반경"이 서로 다른 곳에
  * 놓여 한쪽만 바뀔 수 있다. {@code trip_sessions}는 두 값을 함께 저장하므로 어긋나면 안 된다.
- * 동작(walk → 1km, car → 20km)은 결정 2 그대로다.
+ * 동작(walk → 10km, car → 30km)은 결정 2 그대로다.
  */
 @Getter
 @AllArgsConstructor
