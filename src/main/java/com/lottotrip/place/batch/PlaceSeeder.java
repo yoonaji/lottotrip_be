@@ -43,6 +43,22 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class PlaceSeeder {
 
+    /**
+     * 한 번의 적재에서 넘길 수 있는 최대 페이지 수. <b>폭주를 막는 마지막 방어선이다.</b>
+     *
+     * <p>2026-08-14에 실제로 사고가 났다. 범위를 넘어선 페이지의 응답이
+     * {@code numOfRows: 0}으로 오는 것을 몰라 {@code hasNext()}가 영원히 참이 되었고,
+     * 이 루프가 <b>일일 할당량 1,000회를 통째로 태우고서야</b> 429로 멈췄다.
+     * 게다가 이 메서드는 트랜잭션 하나로 묶여 있어, 그렇게 받은 것마저 전부 롤백됐다.
+     *
+     * <p>{@code hasNext()}는 고쳤지만 상한을 함께 둔다. <b>종료 조건이 하나뿐이면
+     * 그것이 틀렸을 때 막아 줄 것이 없다.</b> 바깥 API의 응답 형태는 우리가 정하지 못한다.
+     *
+     * <p>200페이지 × 100건 = 20,000건. 강원 전체가 2,373건(실측)이므로 넉넉하다.
+     * 여기 걸린다면 정상 상황이 아니므로 경고를 남긴다.
+     */
+    static final int MAX_PAGES = 200;
+
     private final TourApiClient tourApiClient;
     private final PlaceRepository placeRepository;
     private final StateRepository stateRepository;
@@ -65,6 +81,12 @@ public class PlaceSeeder {
             TourApiPage<TourApiPlaceItem> page =
                     tourApiClient.fetchAreaBasedList(Integer.parseInt(areaCode), pageNo);
 
+            // 빈 페이지는 그 자체로 끝이라는 신호다. 전체 건수와 어긋나더라도 여기서 멈춘다.
+            // 이 검사가 없으면 "더 있다"고 말하면서 아무것도 안 주는 응답을 영원히 받아 간다.
+            if (page.items().isEmpty()) {
+                break;
+            }
+
             for (TourApiPlaceItem item : page.items()) {
                 if (upsert(item, cityCache)) {
                     saved++;
@@ -73,8 +95,14 @@ public class PlaceSeeder {
                 }
             }
 
-            // 다음 페이지가 없으면 끝. 한 페이지만 받고 멈추면 강원 2,600건 중 100건만 담긴다.
+            // 다음 페이지가 없으면 끝. 한 페이지만 받고 멈추면 강원 2,373건 중 100건만 담긴다.
             if (!page.hasNext()) {
+                break;
+            }
+            if (pageNo >= MAX_PAGES) {
+                log.warn("페이지 상한 {}에 도달해 적재를 중단합니다 — 지역 {} / 전체 {}건 중 일부만 담겼습니다."
+                                + " 응답이 끝을 알리지 않고 있을 수 있습니다",
+                        MAX_PAGES, areaCode, page.totalCount());
                 break;
             }
             pageNo++;

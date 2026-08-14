@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
@@ -247,21 +248,64 @@ class PlaceSeederTest extends PostgresContainerSupport {
     @Test
     @DisplayName("다음 페이지가 남아 있으면 끝까지 넘긴다")
     void followsPagination() {
-        // totalCount가 페이지 크기보다 크면 아직 남은 것이다. 한 페이지만 받고 끝내면
-        // 강원 2,600건 중 100건만 담긴다.
+        // totalCount가 페이지 크기(100)보다 크면 아직 남은 것이다. 한 페이지만 받고 끝내면
+        // 강원 2,373건 중 100건만 담긴다.
+        //
+        // ⚠️ 응답의 numOfRows로는 판단하지 않는다. 실측(2026-08-14) 결과 이 API는
+        //    마지막 페이지에 '실제 담긴 건수'를, 범위 밖 페이지에 0을 담아 주기 때문이다.
+        //    우리가 요청한 크기(100)와 totalCount로만 따진다.
         seededGangwon();
-        String firstPage = PAGE.replace("\"numOfRows\": 100", "\"numOfRows\": 3")
-                .replace("\"totalCount\": 5", "\"totalCount\": 6");
+        String twoPages = PAGE.replace("\"totalCount\": 5", "\"totalCount\": 150");
         mockServer.expect(requestTo(containsString("pageNo=1")))
-                .andRespond(withSuccess(firstPage, MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess(twoPages, MediaType.APPLICATION_JSON));
         mockServer.expect(requestTo(containsString("pageNo=2")))
-                .andRespond(withSuccess(PAGE.replace("\"totalCount\": 5", "\"totalCount\": 6")
-                        .replace("126508", "126510").replace("126509", "126511"),
+                .andRespond(withSuccess(twoPages.replace("126508", "126510").replace("126509", "126511"),
                         MediaType.APPLICATION_JSON));
 
         seeder.seed(GANGWON);
 
         mockServer.verify();
         assertThat(placeRepository.findAll()).hasSize(4);
+    }
+
+    @Test
+    @DisplayName("응답이 끝없이 '더 있다'고 해도 페이지 상한에서 멈춘다")
+    void stopsAtPageLimit() {
+        // 바깥이 이상해져도 우리 배치가 일일 할당량을 통째로 태워서는 안 된다.
+        // 실제로 그런 일이 있었다(2026-08-14): 범위 밖 페이지의 numOfRows가 0으로 오는 것을 몰라
+        // hasNext()가 영원히 참이 되었고, areaBasedList2 1,000회를 다 쓰고서야 429로 멈췄다.
+        // hasNext()는 고쳤지만, 바깥 응답이 또 달라져도 폭주 자체가 불가능해야 한다.
+        seededGangwon();
+        String neverEnding = PAGE.replace("\"totalCount\": 5", "\"totalCount\": 999999");
+        mockServer.expect(ExpectedCount.times(PlaceSeeder.MAX_PAGES),
+                        requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(neverEnding, MediaType.APPLICATION_JSON));
+
+        seeder.seed(GANGWON);
+
+        // 정확히 상한만큼만 부르고 멈춘다. 한 번이라도 더 부르면 여기서 터진다.
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("빈 페이지를 받으면 전체 건수와 어긋나더라도 멈춘다")
+    void stopsOnEmptyPage() {
+        // totalCount는 999999인데 항목이 0건인 모순된 응답. 줄 것이 없다는 응답보다
+        // 확실한 종료 신호는 없다. 이걸 무시하면 빈 페이지를 영원히 받아 간다.
+        seededGangwon();
+        mockServer.expect(ExpectedCount.once(), requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess("""
+                        {
+                          "response": {
+                            "header": { "resultCode": "0000", "resultMsg": "OK" },
+                            "body": { "items": "", "numOfRows": 0, "pageNo": 1, "totalCount": 999999 }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        seeder.seed(GANGWON);
+
+        mockServer.verify();
+        assertThat(placeRepository.findAll()).isEmpty();
     }
 }
