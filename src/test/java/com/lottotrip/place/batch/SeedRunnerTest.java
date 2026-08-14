@@ -34,7 +34,7 @@ class SeedRunnerTest {
     }
 
     private static PlaceSeeder fakePlaceSeeder(Recorder recorder) {
-        return new PlaceSeeder(null, null, null, null, null) {
+        return new PlaceSeeder(null, null, null, null, null, null) {
             @Override
             public void seed(String areaCode) {
                 recorder.calls.add("place:" + areaCode);

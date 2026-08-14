@@ -2,9 +2,11 @@ package com.lottotrip.place.batch;
 
 import com.lottotrip.place.entity.City;
 import com.lottotrip.place.entity.Place;
+import com.lottotrip.place.entity.PlaceMedia;
 import com.lottotrip.place.entity.State;
 import com.lottotrip.place.entity.TravelCategory;
 import com.lottotrip.place.repository.CityRepository;
+import com.lottotrip.place.repository.PlaceMediaRepository;
 import com.lottotrip.place.repository.PlaceRepository;
 import com.lottotrip.place.repository.StateRepository;
 import com.lottotrip.place.tourapi.TourApiClient;
@@ -23,6 +25,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -117,6 +120,9 @@ class PlaceSeederTest extends PostgresContainerSupport {
     @Autowired
     private CityRepository cityRepository;
 
+    @Autowired
+    private PlaceMediaRepository placeMediaRepository;
+
     private MockRestServiceServer mockServer;
     private PlaceSeeder seeder;
 
@@ -126,8 +132,8 @@ class PlaceSeederTest extends PostgresContainerSupport {
         mockServer = MockRestServiceServer.bindTo(builder).build();
         TourApiClient client = new TourApiClient(builder,
                 new TourApiProperties("https://apis.data.go.kr/B551011/KorService2", "test-key", null, null, 100));
-        seeder = new PlaceSeeder(client, placeRepository, stateRepository, cityRepository,
-                new TravelCategoryMapper());
+        seeder = new PlaceSeeder(client, placeRepository, placeMediaRepository, stateRepository,
+                cityRepository, new TravelCategoryMapper());
     }
 
     /** 지역코드 시드가 이미 돌아간 상태를 만든다. 장소를 시·군에 이으려면 이게 먼저다. */
@@ -266,6 +272,57 @@ class PlaceSeederTest extends PostgresContainerSupport {
 
         mockServer.verify();
         assertThat(placeRepository.findAll()).hasSize(4);
+    }
+
+    // ---------- 대표 이미지 (6-6에서 thumbnailUrl로 나간다) ----------
+
+    @Test
+    @DisplayName("대표 이미지가 있으면 place_media에 담는다")
+    void savesThumbnailImage() {
+        // 슬롯 응답의 thumbnailUrl이 여기서 나온다. 적재 때 담아 두지 않으면
+        // 조회 시점에 채울 방법이 없다(목록 응답에만 오는 값이라 나중에 다시 받으려면 재적재해야 한다).
+        seededGangwon();
+        expectOnePage();
+
+        seeder.seed(GANGWON);
+
+        List<PlaceMedia> media = placeMediaRepository.findAll();
+        assertThat(media).hasSize(1);
+        assertThat(media.get(0).getMediaUrl()).isEqualTo("https://cdn.example.com/beach.jpg");
+        assertThat(media.get(0).getMediaType()).isEqualTo(com.lottotrip.common.enums.MediaType.IMAGE);
+        assertThat(media.get(0).getPlace().getContentId()).isEqualTo("126508");
+    }
+
+    @Test
+    @DisplayName("이미지가 없는 장소는 담지 않는다 — 빈 행을 만들지 않는다")
+    void skipsPlacesWithoutImage() {
+        // 실측 채움률이 18%라 대부분의 장소에 이미지가 없다. 빈 문자열로 행을 만들면
+        // media_url이 NOT NULL인데도 의미 없는 값이 쌓이고, 조회 때 빈 URL이 응답에 나간다.
+        seededGangwon();
+        expectOnePage();
+
+        seeder.seed(GANGWON);
+
+        // 담긴 장소는 2건(관광지·문화시설)인데 이미지가 있는 것은 1건뿐이다.
+        assertThat(placeRepository.findAll()).hasSize(2);
+        assertThat(placeMediaRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("두 번 돌려도 같은 이미지가 쌓이지 않는다")
+    void doesNotDuplicateImageOnRerun() {
+        // 적재는 여러 번 돌아간다(중간 실패 후 재실행, 정기 갱신).
+        // 막지 않으면 돌릴 때마다 같은 이미지 행이 하나씩 늘어난다.
+        seededGangwon();
+        // 기대는 미리 다 걸어 둔다. MockRestServiceServer는 실제 요청이 한 번 나간 뒤에는
+        // 새 기대를 받아 주지 않는다.
+        mockServer.expect(ExpectedCount.twice(), requestTo(containsString("areaBasedList2")))
+                .andRespond(withSuccess(PAGE, MediaType.APPLICATION_JSON));
+
+        seeder.seed(GANGWON);
+        seeder.seed(GANGWON);
+
+        assertThat(placeMediaRepository.findAll()).hasSize(1);
     }
 
     @Test

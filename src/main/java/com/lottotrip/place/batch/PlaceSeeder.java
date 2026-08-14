@@ -1,9 +1,12 @@
 package com.lottotrip.place.batch;
 
+import com.lottotrip.common.enums.MediaType;
 import com.lottotrip.place.entity.City;
 import com.lottotrip.place.entity.Place;
+import com.lottotrip.place.entity.PlaceMedia;
 import com.lottotrip.place.entity.State;
 import com.lottotrip.place.repository.CityRepository;
+import com.lottotrip.place.repository.PlaceMediaRepository;
 import com.lottotrip.place.repository.PlaceRepository;
 import com.lottotrip.place.repository.StateRepository;
 import com.lottotrip.place.tourapi.TourApiClient;
@@ -35,8 +38,9 @@ import java.util.Optional;
  *       넣는다 해도 반경 검색에 걸리지 않아 쓸모가 없다</li>
  * </ul>
  *
- * <p>⚠️ <b>실행 시점(수동 / 스케줄러 / 기동 시)은 아직 붙이지 않았다.</b>
- * 대표 이미지({@code place_media})도 담지 않는다 — 빈 경우의 처리 방침이 미확정이라 6-6에서 정한다.
+ * <p>대표 이미지({@code firstimage})도 함께 담는다(6-6에서 확정). 목록 응답에만 딸려 오는 값이라
+ * 지금 담지 않으면 나중에 채우려 할 때 전체를 다시 받아야 한다. 추가 API 호출은 없다.
+ * 실행은 {@code SeedRunner}가 맡는다 — {@code SEED_ON_STARTUP=true}인 실행에서만 돈다.
  */
 @Slf4j
 @Component
@@ -61,6 +65,7 @@ public class PlaceSeeder {
 
     private final TourApiClient tourApiClient;
     private final PlaceRepository placeRepository;
+    private final PlaceMediaRepository placeMediaRepository;
     private final StateRepository stateRepository;
     private final CityRepository cityRepository;
     private final TravelCategoryMapper categoryMapper;
@@ -139,11 +144,37 @@ public class PlaceSeeder {
                 .modifiedTime(item.modifiedDateTime())
                 .build();
 
-        placeRepository.findByContentId(item.contentId())
-                .ifPresentOrElse(
-                        existing -> existing.updateFrom(fresh),
-                        () -> placeRepository.save(fresh));
+        Place saved = placeRepository.findByContentId(item.contentId())
+                .map(existing -> {
+                    existing.updateFrom(fresh);
+                    return existing;
+                })
+                .orElseGet(() -> placeRepository.save(fresh));
+
+        saveThumbnail(saved, item.thumbnailUrl());
         return true;
+    }
+
+    /**
+     * 대표 이미지를 담는다. 슬롯 응답의 {@code thumbnailUrl}이 여기서 나온다. (6-6)
+     *
+     * <p><b>지금 담아 두지 않으면 나중에 채울 방법이 없다.</b> 이미지 주소는 목록 응답에만 딸려 오므로,
+     * 뒤늦게 필요해지면 전체를 다시 받아야 한다. 담는 비용은 이미 받은 값을 저장하는 것뿐이라
+     * 추가 API 호출이 없다.
+     *
+     * <p>⚠️ 실측 채움률은 <b>18%</b>다. 대부분의 장소에는 이미지가 없고, 그 경우 행을 만들지 않는다.
+     * 빈 문자열로 행을 만들면 {@code media_url}이 NOT NULL인데도 의미 없는 값이 쌓이고
+     * 조회할 때 빈 URL이 그대로 응답에 나간다.
+     */
+    private void saveThumbnail(Place place, String thumbnailUrl) {
+        if (thumbnailUrl == null || thumbnailUrl.isBlank()) {
+            return;
+        }
+        // 적재는 여러 번 돌아간다. 막지 않으면 돌릴 때마다 같은 이미지 행이 하나씩 늘어난다.
+        if (placeMediaRepository.existsByPlaceIdAndMediaUrl(place.getId(), thumbnailUrl)) {
+            return;
+        }
+        placeMediaRepository.save(PlaceMedia.create(place, thumbnailUrl, MediaType.IMAGE));
     }
 
     /**
