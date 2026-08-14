@@ -282,6 +282,66 @@ class TourApiClientTest {
     }
 
     @Test
+    @DisplayName("마지막 페이지는 응답 numOfRows가 실제 건수로 와도 다음이 없다고 한다")
+    void reportsNoNextPageWhenLastPageIsPartiallyFilled() {
+        // 실측(2026-08-14): 마지막 페이지의 numOfRows는 우리가 요청한 100이 아니라
+        // 그 페이지가 실제로 담은 건수로 온다. 강릉 764건을 100개씩 받으면 8페이지에 64가 온다.
+        // 응답값을 그대로 곱하면 3 x 1 = 3 < 250 이라 "아직 남았다"가 되어 끝나지 않는다.
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(
+                        AREA_BASED_LIST.replace("\"numOfRows\": 100", "\"numOfRows\": 1")
+                                .replace("\"pageNo\": 1", "\"pageNo\": 3"),
+                        MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page = client.fetchAreaBasedList(1, 3);
+
+        // 우리가 요청한 크기(100)로 따져야 3 x 100 = 300 >= 250 이 되어 멈춘다.
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("범위를 넘어선 페이지는 numOfRows가 0으로 와도 무한히 돌지 않는다")
+    void stopsBeyondLastPage() {
+        // 실측(2026-08-14): 범위 밖 페이지는 {"items": "", "numOfRows": 0}으로 온다.
+        // 응답값을 곱하면 pageNo x 0 = 0 < totalCount 가 되어 몇 페이지를 넘겨도 참이다.
+        // 이 한 줄이 배치를 무한 루프에 빠뜨려 일일 할당량 1,000회를 통째로 태웠다.
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess("""
+                        {
+                          "response": {
+                            "header": { "resultCode": "0000", "resultMsg": "OK" },
+                            "body": { "items": "", "numOfRows": 0, "pageNo": 4, "totalCount": 250 }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page = client.fetchAreaBasedList(1, 4);
+
+        assertThat(page.items()).isEmpty();
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
+    @DisplayName("받은 항목이 없으면 계산과 무관하게 멈춘다 — 더 줄 것이 없다는 뜻이다")
+    void stopsWhenPageCameBackEmpty() {
+        // totalCount는 250인데 항목이 0건인 모순된 응답. 곱셈만 보면 1 x 100 = 100 < 250 이라
+        // 계속 요청하게 되지만, 빈 페이지는 그 자체로 끝이라는 신호다.
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess("""
+                        {
+                          "response": {
+                            "header": { "resultCode": "0000", "resultMsg": "OK" },
+                            "body": { "items": "", "numOfRows": 100, "pageNo": 1, "totalCount": 250 }
+                          }
+                        }
+                        """, MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page = client.fetchAreaBasedList(1, 1);
+
+        assertThat(page.hasNext()).isFalse();
+    }
+
+    @Test
     @DisplayName("결과가 0건이면 items가 빈 문자열로 와도 빈 리스트다")
     void toleratesEmptyStringItems() {
         mockServer.expect(requestTo(containsString("/areaBasedList2")))

@@ -142,7 +142,7 @@ public class TourApiClient {
         TourApiResponse<TourApiPlaceItem> response =
                 call(uri, new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
                 });
-        return TourApiPage.from(response);
+        return TourApiPage.from(response, pageNo, properties.numOfRows());
     }
 
     /**
@@ -190,7 +190,7 @@ public class TourApiClient {
                 call(uri(OP_LOCATION_BASED_LIST, params),
                         new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
                         });
-        return TourApiPage.from(response);
+        return TourApiPage.from(response, pageNo, properties.numOfRows());
     }
 
     /**
