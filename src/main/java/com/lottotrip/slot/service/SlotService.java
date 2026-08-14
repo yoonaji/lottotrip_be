@@ -3,7 +3,17 @@ package com.lottotrip.slot.service;
 import com.lottotrip.common.enums.BudgetLevel;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.mission.entity.Mission;
+import com.lottotrip.mission.service.MissionMatcher;
+import com.lottotrip.place.dto.PlaceCandidate;
+import com.lottotrip.place.entity.Place;
+import com.lottotrip.place.entity.PlaceMedia;
+import com.lottotrip.place.repository.PlaceMediaRepository;
+import com.lottotrip.place.service.NearbyPlaceFinder;
 import com.lottotrip.slot.dto.SlotDrawRequest;
+import com.lottotrip.slot.dto.SlotDrawResponse;
+import com.lottotrip.slot.entity.SavedSlot;
+import com.lottotrip.slot.repository.SavedSlotRepository;
 import com.lottotrip.slot.entity.TransportType;
 import com.lottotrip.slot.entity.TripSession;
 import com.lottotrip.slot.repository.TripSessionRepository;
@@ -15,12 +25,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 슬롯 큐레이팅. (roadmap 6단계)
  *
- * <p>지금은 세션 확보(6-1)까지만 들어 있다. 반경 안 후보 조회(6-3)·추첨(6-4)·미션 매칭(6-5)이
- * 차례로 붙어 {@code POST /api/v1/slot/draw}(6-6)를 이룬다.
+ * <p>세션 확보(6-1) → 반경(6-2) → 후보 조회(6-3) → 추첨(6-4) → 미션 매칭(6-5)을 엮어
+ * {@code POST /api/v1/slot/draw}(6-6)를 이룬다. 각 단계는 별도 클래스가 맡고
+ * 이 클래스는 <b>순서와 실패 처리</b>만 책임진다.
  */
 @Slf4j
 @Service
@@ -37,6 +49,62 @@ public class SlotService {
 
     private final TripSessionRepository tripSessionRepository;
     private final UserRepository userRepository;
+    private final NearbyPlaceFinder nearbyPlaceFinder;
+    private final PlaceDrawer placeDrawer;
+    private final MissionMatcher missionMatcher;
+    private final SavedSlotRepository savedSlotRepository;
+    private final PlaceMediaRepository placeMediaRepository;
+
+    /**
+     * 슬롯을 돌린다. <b>이 도메인의 핵심 흐름이다.</b> (tour_api_erd.md 2-4)
+     *
+     * <pre>
+     * 세션 확보 → 반경 결정 → DB에서 후보 조회 → 추첨 → saved_slots 저장 → 미션 매칭 → 응답 조립
+     * </pre>
+     *
+     * <p><b>공공 API를 부르지 않는다</b>(결정 10). 후보를 DB에서만 찾으므로 응답이 빠르고,
+     * 공공데이터포털이 멈춰도 슬롯은 돌아간다. 실시간 호출은 세부조회(6-7)가 담당한다.
+     *
+     * <p><b>반경은 세션이 들고 있는 값을 쓴다.</b> 요청의 {@code transport}가 아니라 세션의 것을 보는 이유:
+     * 기존 세션을 재사용할 때 세션 값을 갱신하지 않기로 했으므로(결정 1의 A안), 요청 값을 쓰면
+     * 세션에 기록된 반경과 실제로 뽑은 반경이 어긋난다.
+     *
+     * @throws CustomException 반경 안에 후보가 없으면 {@link ErrorCode#NO_PLACE_FOUND}.
+     *                         적재가 강원 한정이라 강원 밖 좌표로 돌리면 실제로 이 상황이 된다
+     *                         (2026-08-14 사용자 결정 — 폴백 없이 404를 그대로 내보낸다)
+     */
+    @Transactional
+    public SlotDrawResponse draw(Long userId, SlotDrawRequest request) {
+        TripSession session = getOrCreateActiveSession(userId, request);
+
+        List<PlaceCandidate> candidates = nearbyPlaceFinder.findWithin(
+                session.getAccommodationLatitude(),
+                session.getAccommodationLongitude(),
+                session.getSearchRadiusKm());
+
+        if (candidates.isEmpty()) {
+            log.debug("반경 내 후보 없음 — 기준 ({}, {}) / 반경 {}km",
+                    session.getAccommodationLatitude(), session.getAccommodationLongitude(),
+                    session.getSearchRadiusKm());
+            throw new CustomException(ErrorCode.NO_PLACE_FOUND);
+        }
+
+        PlaceCandidate picked = placeDrawer.draw(candidates);
+        SavedSlot savedSlot = savedSlotRepository.save(
+                SavedSlot.create(session, picked.place()));
+
+        // 미션은 곁들이는 정보다. 확보하지 못해도 장소는 이미 뽑혔으므로 응답을 실패시키지 않는다.
+        Mission mission = missionMatcher.matchFor(picked.place()).orElse(null);
+
+        return SlotDrawResponse.of(savedSlot.getId(), picked, thumbnailOf(picked.place()), mission);
+    }
+
+    /** 대표 이미지 주소. 실측 채움률이 18%라 대개 비어 있다. */
+    private String thumbnailOf(Place place) {
+        return placeMediaRepository.findFirstByPlaceIdOrderByIdAsc(place.getId())
+                .map(PlaceMedia::getMediaUrl)
+                .orElse(null);
+    }
 
     /**
      * 쓸 수 있는 세션을 찾고, 없으면 만든다. <b>슬롯 API의 진입점이다.</b>

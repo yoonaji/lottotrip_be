@@ -30,8 +30,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class SecurityConfigIntegrationTest extends PostgresContainerSupport {
 
-    /** 아직 구현되지 않았지만 인증이 필요한 경로. 시큐리티는 핸들러 유무와 무관하게 먼저 막는다. */
-    private static final String PROTECTED_PATH = "/api/v1/slot/draw";
+    /**
+     * 인증이 필요한 아무 경로. 시큐리티는 핸들러 유무와 무관하게 먼저 막는다.
+     *
+     * <p><b>일부러 존재하지 않는 경로를 쓴다.</b> 실제 API(예전에는 {@code /api/v1/slot/draw})를
+     * 가리키면, 그 API가 구현되는 순간 응답이 404에서 400(본문 검증 실패)으로 바뀌어
+     * <b>시큐리티와 무관한 이유로 이 테스트가 깨진다.</b> 실제로 6-6에서 그렇게 됐다.
+     * 여기서 확인하려는 것은 "인증을 통과하는가"뿐이므로 핸들러가 없는 편이 낫다.
+     */
+    private static final String PROTECTED_PATH = "/api/v1/__security-probe";
 
     @Autowired
     private MockMvc mockMvc;
