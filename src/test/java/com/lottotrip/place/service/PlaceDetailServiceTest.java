@@ -70,7 +70,7 @@ class PlaceDetailServiceTest {
         RestClient.Builder builder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(builder).build();
         TourApiClient client = new TourApiClient(builder,
-                new TourApiProperties("https://apis.data.go.kr/B551011/KorService2", "test-key", null, null, 100));
+                new TourApiProperties("https://apis.data.go.kr/B551011/KorService2", null, "test-key", null, null, 100));
         service = new PlaceDetailService(client);
     }
 

@@ -4,8 +4,10 @@ import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -64,20 +66,22 @@ public class TourApiClient {
      */
     private static final String ARRANGE_BY_DISTANCE = "E";
 
-    /**
-     * {@code locationBasedList2}의 반경 상한(미터).
-     *
-     * <p>이 값을 넘겨도 API는 오류를 주지 않고 <b>조용히 잘린 결과</b>를 준다.
-     * 그러면 "반경 50km로 뽑았다"고 착각한 채 20km 안의 장소만 받게 되므로 우리가 먼저 막는다.
-     *
-     * <p>⚠️ <b>우리 도메인의 반경과 어긋난다.</b> {@code TransportType}은 {@code CAR}에 30km를 주는데
-     * 이 API는 20km까지만 받는다. 지금은 추첨이 DB에서 이뤄져(결정 10) 부딪히지 않지만,
-     * 이 메서드를 추첨 경로에 다시 끌어들이면 30km 요청이 그 자리에서 거절된다.
-     */
-    static final int MAX_RADIUS_METERS = 20_000;
-
     /** 지역 코드 조회는 건수가 적다(시도 17개, 시군구 최대 수십 개). 한 번에 받아 온다. */
     private static final int AREA_CODE_ROWS = 100;
+
+    /** 일일 호출 잔량을 알려 주는 응답 헤더. 공공데이터포털이 모든 응답에 실어 준다(2026-08-15 실측). */
+    private static final String HEADER_RATE_LIMIT_REMAINING = "X-RateLimit-Remaining";
+
+    /**
+     * 이 값 이하로 남으면 경고를 남긴다.
+     *
+     * <p><b>왜 감시하는가.</b> 2026-08-14에 페이지 순회 버그로 하루치 1,000회를 통째로 태웠는데,
+     * 그 사실을 <b>429를 맞고 나서야</b> 알았다. 잔량이 응답에 실려 오므로 <b>소진되기 전에</b> 알 수 있다.
+     *
+     * <p><b>왜 매번 찍지 않는가.</b> 호출마다 로그를 남기면 정상 운영 중에도 줄이 계속 쌓여
+     * 정작 위험한 순간에 아무도 보지 않는다. 드물게 나와야 눈에 띈다.
+     */
+    private static final int QUOTA_WARNING_THRESHOLD = 100;
 
     private final RestClient restClient;
     private final TourApiProperties properties;
@@ -146,22 +150,37 @@ public class TourApiClient {
     }
 
     /**
-     * 좌표 기반 관광 정보 목록. (roadmap 5-2)
+     * 좌표 기반 관광 정보 목록. <b>슬롯 추첨의 후보가 전부 여기서 나온다.</b> (roadmap 6-11, 결정 12)
      *
-     * <p>⚠️ <b>현재 어느 경로에서도 호출하지 않는다.</b> 결정 8(온디맨드) 시절에는 이 메서드가
-     * 슬롯 추첨의 후보를 받아오는 핵심이었으나, 결정 10으로 추첨이 DB 조회로 바뀌면서 자리를 잃었다.
-     * 배치 적재는 {@code areaBasedList2}를, 세부조회는 {@code detailCommon2}를 쓴다.
+     * <p>국문 관광정보({@link TourApiService#KOREAN})를 부르는 짧은 형태다.
      *
-     * <p><b>지우지 않고 남겨 둔 이유:</b> 적재 범위가 강원 한정이라 <b>강원 밖 좌표로 슬롯을 돌리면
-     * DB에 후보가 하나도 없다.</b> 그때 실시간으로 후보를 받아오는 폴백이 필요해질 수 있다.
-     * 다만 이 API의 반경 상한이 20km라 {@code CAR}(30km)를 그대로 태울 수는 없다.
+     * @see #fetchLocationBasedList(TourApiService, double, double, int, String, int)
+     */
+    public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
+            double latitude, double longitude, int radiusMeters, String contentTypeId, int pageNo) {
+        return fetchLocationBasedList(
+                TourApiService.KOREAN, latitude, longitude, radiusMeters, contentTypeId, pageNo);
+    }
+
+    /**
+     * 좌표 기반 관광 정보 목록. (roadmap 6-11, 결정 12)
      *
-     * <p>응답의 {@code dist}가 요청 좌표로부터의 거리(미터)라 거리 계산을 따로 하지 않아도 된다.
+     * <p>응답의 {@code dist}가 요청 좌표로부터의 거리(미터)라 <b>거리 계산을 따로 하지 않아도 된다.</b>
+     *
+     * <p><b>⚠️ 반경에 상한이 없다.</b> 예전에는 20,000m를 넘기면 이 메서드가 막았다. "넘기면 API가
+     * 조용히 잘린 결과를 준다"고 적혀 있었으나 <b>실측(2026-08-15) 결과 사실이 아니었다</b> —
+     * 강릉 기준 20km 763건 / 30km 880건 / 50km 1,290건으로 정직하게 늘어난다.
+     * 이 허구의 상한 때문에 {@code CAR}(30km)를 태울 수 없다고 오해하고 있었다.
+     *
+     * <p><b>⚠️ 진짜 상한은 {@code numOfRows}의 1,000이다.</b> 후보가 그보다 많으면
+     * {@code arrange=E}(거리순) 덕에 <b>먼 곳부터 잘린다.</b> 서울 30km는 후보 4,181건 중
+     * 가까운 1,000건만 와서 실질 반경이 6.4km가 된다. 수도권을 다루게 되면 이 지점을 먼저 봐야 한다(결정 15).
      *
      * <p>⚠️ <b>{@code mapX}에 경도, {@code mapY}에 위도를 넣는다.</b> 수학 좌표계의 x·y라서
      * 흔히 쓰는 "위도·경도" 순서와 반대다. 뒤집어 보내도 API는 오류 대신 0건이나 엉뚱한 장소를
      * 정상 응답으로 주기 때문에, 틀려도 드러나지 않고 추첨 결과만 조용히 이상해진다.
      *
+     * @param service       어느 서비스에 물어볼 것인가. {@link TourApiService#ACCESSIBLE}이면 무장애 등록분만 온다
      * @param latitude      기준 위도 (숙소 좌표)
      * @param longitude     기준 경도
      * @param radiusMeters  반경(미터). 우리 도메인은 km로 말하므로 부르는 쪽이 1000을 곱해 넘긴다
@@ -169,7 +188,8 @@ public class TourApiClient {
      * @param pageNo        1부터 시작하는 페이지 번호
      */
     public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
-            double latitude, double longitude, int radiusMeters, String contentTypeId, int pageNo) {
+            TourApiService service, double latitude, double longitude,
+            int radiusMeters, String contentTypeId, int pageNo) {
 
         requireValidRadius(radiusMeters);
 
@@ -187,24 +207,25 @@ public class TourApiClient {
         }
 
         TourApiResponse<TourApiPlaceItem> response =
-                call(uri(OP_LOCATION_BASED_LIST, params),
+                call(uri(service, OP_LOCATION_BASED_LIST, params),
                         new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
                         });
         return TourApiPage.from(response, pageNo, properties.numOfRows());
     }
 
     /**
-     * 반경이 API가 받아들이는 범위인지 확인한다.
+     * 반경이 말이 되는 값인지 확인한다.
+     *
+     * <p><b>상한은 없다</b>(위 설명 참조). 0 이하만 막는다.
      *
      * <p>{@code CustomException}이 아니라 {@link IllegalArgumentException}인 이유는
-     * {@link #requireConfigured()}와 같다. 반경은 사용자가 보내는 값이 아니라 <b>우리가 정하는 값</b>이므로,
-     * 범위를 벗어났다면 사용자 입력이 잘못된 것이 아니라 <b>우리 코드의 잘못</b>이다.
+     * {@link #requireConfigured()}와 같다. 반경은 사용자가 보내는 값이 아니라 {@code TransportType}에서
+     * <b>우리가 계산하는 값</b>이므로, 0 이하라면 사용자 입력이 잘못된 것이 아니라 <b>우리 코드의 잘못</b>이다.
      * 사용자에게 보여줄 에러가 아니라 개발 중에 터져야 하는 신호다.
      */
     private void requireValidRadius(int radiusMeters) {
-        if (radiusMeters <= 0 || radiusMeters > MAX_RADIUS_METERS) {
-            throw new IllegalArgumentException(
-                    "반경은 1 이상 " + MAX_RADIUS_METERS + " 이하(미터)여야 합니다: " + radiusMeters);
+        if (radiusMeters <= 0) {
+            throw new IllegalArgumentException("반경은 1 이상(미터)이어야 합니다: " + radiusMeters);
         }
     }
 
@@ -263,23 +284,52 @@ public class TourApiClient {
      */
     private <T> TourApiResponse<T> call(URI uri, ParameterizedTypeReference<TourApiResponse<T>> type) {
         try {
-            TourApiResponse<T> response = restClient.get()
+            // body(...) 대신 toEntity(...)로 받는다. 본문만 받으면 응답 헤더를 볼 수 없는데,
+            // 일일 잔량이 헤더로만 오기 때문이다.
+            ResponseEntity<TourApiResponse<T>> entity = restClient.get()
                     .uri(uri)
                     .retrieve()
                     .onStatus(HttpStatusCode::isError, (request, res) -> {
-                        // 4xx든 5xx든 배치 입장에서는 "지금 데이터를 못 받는다"로 같다.
+                        // 4xx든 5xx든 부르는 쪽 입장에서는 "지금 데이터를 못 받는다"로 같다.
                         // 사용자에게 돌려줄 400이 없는 자리라 구분해도 쓸 데가 없다.
                         log.warn("TourAPI 오류 응답: status={}, uri={}", res.getStatusCode(), maskServiceKey(uri));
                         throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
                     })
-                    .body(type);
-            return validate(response, uri);
+                    .toEntity(type);
+
+            checkRemainingQuota(entity.getHeaders(), uri);
+            return validate(entity.getBody(), uri);
         } catch (CustomException e) {
             throw e;
         } catch (RestClientException e) {
             // XML 에러 문서가 오거나 연결이 끊긴 경우 여기로 온다.
             log.warn("TourAPI 호출 실패 uri={}: {}", maskServiceKey(uri), e.getMessage());
             throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
+        }
+    }
+
+    /**
+     * 남은 일일 호출이 얼마 없으면 경고를 남긴다. (roadmap 6-9)
+     *
+     * <p><b>실패해도 조용히 넘어간다.</b> 이건 부가 정보를 읽는 감시 장치이므로,
+     * 헤더가 없거나 숫자가 아니라고 조회 자체를 실패시키면 <b>감시 장치가 본체를 망가뜨리는</b> 셈이 된다.
+     *
+     * <p>할당량은 <b>서비스·오퍼레이션마다 따로</b> 계산된다(2026-08-15 실측).
+     * 그래서 어느 URI에서 나온 값인지 함께 남긴다 — "무엇이 소진되고 있는가"를 알아야 조치할 수 있다.
+     */
+    private void checkRemainingQuota(HttpHeaders headers, URI uri) {
+        String raw = headers.getFirst(HEADER_RATE_LIMIT_REMAINING);
+        if (raw == null || raw.isBlank()) {
+            return;
+        }
+        try {
+            int remaining = Integer.parseInt(raw.trim());
+            if (remaining <= QUOTA_WARNING_THRESHOLD) {
+                log.warn("TourAPI 일일 할당량이 얼마 남지 않았습니다 — 남은 호출 {}회, uri={}",
+                        remaining, maskServiceKey(uri));
+            }
+        } catch (NumberFormatException e) {
+            log.debug("할당량 헤더를 숫자로 읽지 못했습니다: {}", raw);
         }
     }
 
@@ -310,10 +360,15 @@ public class TourApiClient {
      * 이미 인코딩된 키(%2B…)를 다시 인코딩하면 {@code %252B}가 되어 역시 망가진다.
      * 둘 다 "인증되지 않은 키" 오류로 나타나서 원인을 찾기 어렵다.
      */
+    /** 국문 관광정보를 부르는 짧은 형태. */
     private URI uri(String operation, Map<String, Object> params) {
+        return uri(TourApiService.KOREAN, operation, params);
+    }
+
+    private URI uri(TourApiService service, String operation, Map<String, Object> params) {
         requireConfigured();
 
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(properties.baseUrl())
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(baseUrlOf(service))
                 .path("/" + operation)
                 .queryParam("serviceKey", URLEncoder.encode(properties.serviceKey(), StandardCharsets.UTF_8))
                 .queryParam("MobileOS", properties.mobileOs())
@@ -322,6 +377,11 @@ public class TourApiClient {
         params.forEach(builder::queryParam);
 
         return builder.build(true).toUri();
+    }
+
+    /** 서비스에 맞는 주소를 고른다. 인증키·파라미터는 둘이 같아서 호스트만 갈아 끼우면 된다. */
+    private String baseUrlOf(TourApiService service) {
+        return service == TourApiService.ACCESSIBLE ? properties.withBaseUrl() : properties.baseUrl();
     }
 
     /**

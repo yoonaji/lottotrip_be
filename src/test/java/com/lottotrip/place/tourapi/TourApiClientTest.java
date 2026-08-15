@@ -1,10 +1,16 @@
 package com.lottotrip.place.tourapi;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -35,6 +41,9 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 class TourApiClientTest {
 
     private static final String BASE_URL = "https://apis.data.go.kr/B551011/KorService2";
+
+    /** 무장애 여행 정보 서비스. 오퍼레이션·파라미터는 국문 관광정보와 동일하고 호스트만 다르다. (roadmap 6-9) */
+    private static final String WITH_BASE_URL = "https://apis.data.go.kr/B551011/KorWithService2";
 
     /**
      * 포털이 주는 "디코딩" 키에는 {@code +} {@code /} {@code =} 가 섞여 있다.
@@ -137,16 +146,43 @@ class TourApiClientTest {
     private RestClient.Builder builder;
     private MockRestServiceServer mockServer;
     private TourApiClient client;
+    private ListAppender<ILoggingEvent> logs;
 
     @BeforeEach
     void setUp() {
         builder = RestClient.builder();
         mockServer = MockRestServiceServer.bindTo(builder).build();
         client = new TourApiClient(builder, properties(SERVICE_KEY));
+        logs = attachLogAppender();
+    }
+
+    @AfterEach
+    void tearDown() {
+        ((Logger) LoggerFactory.getLogger(TourApiClient.class)).detachAppender(logs);
     }
 
     private TourApiProperties properties(String serviceKey) {
-        return new TourApiProperties(BASE_URL, serviceKey, "ETC", "lottotrip", 100);
+        return new TourApiProperties(BASE_URL, WITH_BASE_URL, serviceKey, "ETC", "lottotrip", 100);
+    }
+
+    /**
+     * 로그를 가로채는 임시 부착물. (roadmap 6-9)
+     *
+     * <p>할당량 경고는 <b>로그로만 드러나는 동작</b>이라 반환값을 확인할 수 없다.
+     * Logback의 {@code ListAppender}를 붙이면 이 클래스가 남긴 로그를 목록으로 받아 검사할 수 있다.
+     * 실제로 경고가 나가는지를 보는 것이 목적이므로, 값을 따로 노출하는 메서드를 만들어
+     * "테스트를 위한 통로"를 여는 것보다 이 편이 정직하다.
+     */
+    private ListAppender<ILoggingEvent> attachLogAppender() {
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        ((Logger) LoggerFactory.getLogger(TourApiClient.class)).addAppender(appender);
+        return appender;
+    }
+
+    private boolean warnedContaining(String fragment) {
+        return logs.list.stream()
+                .anyMatch(e -> e.getLevel() == Level.WARN && e.getFormattedMessage().contains(fragment));
     }
 
     // ---------- 지역 기반 목록: 매핑 ----------
@@ -672,22 +708,63 @@ class TourApiClientTest {
     }
 
     @Test
-    @DisplayName("반경이 API 상한(20km)을 넘으면 호출하지 않고 거절한다")
-    void rejectsRadiusAboveApiLimit() {
-        // TourAPI의 radius 상한이 20000m다. 넘겨도 오류 없이 조용히 잘린 결과가 오므로
-        // "반경 50km로 뽑았다"고 착각하게 된다. 우리가 먼저 막는다.
-        assertThatThrownBy(() -> client.fetchLocationBasedList(37.7519, 128.8761, 20001, null, 1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("20000");
+    @DisplayName("반경 30km도 그대로 요청한다 — 20km 상한은 실재하지 않았다")
+    void allowsRadiusBeyond20km() {
+        // ⚠️ 이 테스트는 예전 동작을 뒤집은 것이다. 전에는 20,000m를 넘기면
+        // IllegalArgumentException으로 막았는데, 실측(2026-08-15) 결과 API가 조용히 자르지 않는다.
+        // 강릉 기준 radius=20000 → 763건 / 30000 → 880건 / 50000 → 1290건.
+        // 이 허구의 상한 때문에 CAR(30km)를 태울 수 없다고 잘못 판단하고 있었다. (결정 12 근거 ②)
+        mockServer.expect(requestTo(containsString("radius=30000")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
 
-        mockServer.verify(); // 요청이 나가지 않았다
+        client.fetchLocationBasedList(37.7519, 128.8761, 30000, null, 1);
+
+        mockServer.verify();
     }
 
     @Test
-    @DisplayName("반경이 0 이하면 거절한다")
+    @DisplayName("반경이 0 이하면 거절한다 — 이건 여전히 우리 코드의 잘못이다")
     void rejectsNonPositiveRadius() {
+        // 상한은 없어졌지만 하한은 남는다. 0이나 음수는 API가 뭘 돌려주든 우리 계산이 틀린 것이다.
         assertThatThrownBy(() -> client.fetchLocationBasedList(37.7519, 128.8761, 0, null, 1))
                 .isInstanceOf(IllegalArgumentException.class);
+
+        mockServer.verify();
+    }
+
+    // ---------- 무장애 여행 정보 (KorWithService2) — roadmap 6-9 ----------
+
+    @Test
+    @DisplayName("무장애를 요청하면 KorWithService2 호스트로 나간다")
+    void callsAccessibleHost() {
+        // 실측(2026-08-15): 두 서비스는 오퍼레이션명·파라미터가 완전히 동일하고 호스트만 다르다.
+        // 그래서 조회 메서드를 새로 만들지 않고 "어느 서비스인가"만 골라 넘긴다.
+        mockServer.expect(requestTo(containsString(WITH_BASE_URL + "/locationBasedList2")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(TourApiService.ACCESSIBLE, 37.7519, 128.8761, 30000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("서비스를 지정하지 않으면 국문 관광정보(KorService2)를 부른다")
+    void callsKoreanHostByDefault() {
+        mockServer.expect(requestTo(containsString(BASE_URL + "/locationBasedList2")))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(37.7519, 128.8761, 30000, null, 1);
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("무장애 서비스도 인증키·공통 파라미터를 똑같이 싣는다")
+    void accessibleHostCarriesSameParameters() {
+        mockServer.expect(requestTo(containsString("serviceKey=" + ENCODED_SERVICE_KEY)))
+                .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        client.fetchLocationBasedList(TourApiService.ACCESSIBLE, 37.7519, 128.8761, 30000, "12", 1);
 
         mockServer.verify();
     }
@@ -723,6 +800,60 @@ class TourApiClientTest {
                 .isInstanceOf(CustomException.class)
                 .extracting("errorCode")
                 .isEqualTo(ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
+    // ---------- 일일 할당량 감시 (roadmap 6-9) ----------
+
+    @Test
+    @DisplayName("남은 호출이 임계 이하로 떨어지면 경고를 남긴다")
+    void warnsWhenQuotaRunsLow() {
+        // 2026-08-14에 페이지 순회 버그로 일일 할당량 1,000회를 통째로 태웠는데,
+        // 그 사실을 429를 맞고 나서야 알았다. 응답 헤더에 잔량이 실려 오므로 소진 전에 알 수 있다.
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(AREA_BASED_LIST, MediaType.APPLICATION_JSON)
+                        .header("X-RateLimit-Remaining", "37")
+                        .header("X-RateLimit-Limit", "1000"));
+
+        client.fetchAreaBasedList(32, 1);
+
+        assertThat(warnedContaining("37")).isTrue();
+    }
+
+    @Test
+    @DisplayName("남은 호출이 넉넉하면 경고하지 않는다 — 매 호출마다 시끄러우면 아무도 안 본다")
+    void staysQuietWhenQuotaHealthy() {
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(AREA_BASED_LIST, MediaType.APPLICATION_JSON)
+                        .header("X-RateLimit-Remaining", "950")
+                        .header("X-RateLimit-Limit", "1000"));
+
+        client.fetchAreaBasedList(32, 1);
+
+        assertThat(warnedContaining("남은 호출")).isFalse();
+    }
+
+    @Test
+    @DisplayName("할당량 헤더가 없어도 조회는 정상 동작한다")
+    void worksWithoutQuotaHeader() {
+        // 헤더는 부가 정보다. 없다고 조회가 실패하면 감시 장치가 본체를 망가뜨리는 셈이다.
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(AREA_BASED_LIST, MediaType.APPLICATION_JSON));
+
+        TourApiPage<TourApiPlaceItem> page = client.fetchAreaBasedList(32, 1);
+
+        assertThat(page.items()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("할당량 헤더가 숫자가 아니어도 조회는 정상 동작한다")
+    void survivesMalformedQuotaHeader() {
+        mockServer.expect(requestTo(containsString("/areaBasedList2")))
+                .andRespond(withSuccess(AREA_BASED_LIST, MediaType.APPLICATION_JSON)
+                        .header("X-RateLimit-Remaining", "unknown"));
+
+        TourApiPage<TourApiPlaceItem> page = client.fetchAreaBasedList(32, 1);
+
+        assertThat(page.items()).hasSize(1);
     }
 
     // ---------- 헬퍼 ----------

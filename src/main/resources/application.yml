@@ -61,6 +61,9 @@ oauth:
 tourapi:
   # 한국관광공사 TourAPI (공공데이터포털). 5단계 장소 데이터 적재에만 쓴다.
   base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
+  # 무장애 여행 정보. 인증키·파라미터는 위와 같고 호스트만 다르다.
+  # 여기 담긴 장소는 위 서비스의 부분집합이라, 이쪽으로 조회하는 것 자체가 "무장애 등록분만" 필터가 된다.
+  with-base-url: ${TOUR_API_WITH_BASE_URL:https://apis.data.go.kr/B551011/KorWithService2}
   # ⚠️ 포털의 "일반 인증키(Decoding)" 값을 넣는다. 인코딩 값을 넣으면 이중 인코딩되어 인증에 실패한다.
   #    비어 있으면 수집 기능만 꺼지고, 서버 기동과 나머지 API에는 영향이 없다.
   service-key: ${TOUR_API_SERVICE_KEY:}
