@@ -63,8 +63,7 @@ public class PlaceUpserter {
                 .contentTypeId(item.contentTypeId())
                 .city(resolveCity(item).orElse(null))
                 .name(item.title())
-                .category(categoryMapper.map(
-                        item.contentTypeId(), item.cat1(), item.cat2(), item.cat3()))
+                .category(categoryMapper.map(item.cat2()))
                 .address(item.address())
                 .latitude(item.latitude())
                 .longitude(item.longitude())

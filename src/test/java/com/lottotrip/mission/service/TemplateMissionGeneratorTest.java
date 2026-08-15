@@ -24,7 +24,7 @@ class TemplateMissionGeneratorTest {
             .contentId("c-1")
             .contentTypeId("12")
             .name("사천진해변")
-            .category(TravelCategory.BEACH)
+            .category(TravelCategory.NATURE_ATTRACTION)
             .latitude(37.8021)
             .longitude(128.8954)
             .build();

@@ -46,7 +46,7 @@ class PlaceEntityTest extends PostgresContainerSupport {
                 .city(city)
                 .name("사천진해변")
                 .description("조용한 해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원 강릉시 사천면")
                 .latitude(37.8021)
                 .longitude(128.8954)
@@ -105,15 +105,15 @@ class PlaceEntityTest extends PostgresContainerSupport {
                 .setParameter("id", place.getId())
                 .getSingleResult();
 
-        assertThat(stored[0]).hasToString("BEACH");
+        assertThat(stored[0]).hasToString("NATURE_ATTRACTION");
         assertThat(stored[1]).hasToString("LOW");
     }
 
     @Test
     @DisplayName("category는 응답에 내려줄 한글 표시명을 갖는다")
     void categoryHasDisplayName() {
-        // 명세 응답 예시: "category": "해변" (tour_api_erd.md 4-3)
-        assertThat(TravelCategory.BEACH.getDisplayName()).isEqualTo("해변");
+        // 명세 응답 예시: "category": "자연관광지" (tour_api_erd.md 4-3)
+        assertThat(TravelCategory.NATURE_ATTRACTION.getDisplayName()).isEqualTo("자연관광지");
     }
 
     // ---------- 미사용 컬럼 비우기 (5-4, 결정 9 · 결정 10) ----------
@@ -128,7 +128,7 @@ class PlaceEntityTest extends PostgresContainerSupport {
         Place place = Place.builder()
                 .contentId("3535323")
                 .name("사천진해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원 강릉시 사천면")
                 .latitude(37.8021)
                 .longitude(128.8954)
@@ -157,7 +157,7 @@ class PlaceEntityTest extends PostgresContainerSupport {
         Place noCoordinate = Place.builder()
                 .contentId("3535323")
                 .name("좌표없음")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .build();
 
         assertThatThrownBy(() -> {

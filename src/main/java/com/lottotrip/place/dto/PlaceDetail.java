@@ -19,7 +19,7 @@ import com.lottotrip.place.entity.Place;
  * <b>바깥에 나가면 안 되거나 나갈 이유가 없는 값</b>이 섞여 있다. 또 Entity를 응답에 쓰면
  * 테이블 구조를 바꿀 때마다 API 응답이 따라 바뀐다.
  *
- * @param category         한글 표시명이 나간다({@code BEACH} → {@code "해변"}). 명세 4-3 응답 예시 기준
+ * @param category         한글 표시명이 나간다({@code NATURE_ATTRACTION} → {@code "자연관광지"}). TourAPI cat2 이름을 그대로 쓴다
  * @param description      TourAPI 소개글. 실시간 조회가 실패하거나 자료가 없으면 null
  * @param homepageUrl      홈페이지 주소. TourAPI는 HTML 링크로 주므로 주소만 뽑아 담는다
  * @param liveDetailLoaded 실시간 조회가 성공했는지. false면 아래 두 값이 비어 있다는 뜻이다.

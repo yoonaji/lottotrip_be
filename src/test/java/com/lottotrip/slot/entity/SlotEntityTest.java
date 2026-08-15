@@ -52,7 +52,7 @@ class SlotEntityTest extends PostgresContainerSupport {
                 .contentId(nextContentId())
                 .city(city)
                 .name(name)
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원 강릉시")
                 .latitude(37.8021)
                 .longitude(128.8954)

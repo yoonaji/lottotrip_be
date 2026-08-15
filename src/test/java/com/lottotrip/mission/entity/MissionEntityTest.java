@@ -48,7 +48,7 @@ class MissionEntityTest extends PostgresContainerSupport {
                 .contentId("3535323")
                 .city(city)
                 .name("사천진해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원 강릉시")
                 .latitude(37.8021)
                 .longitude(128.8954)

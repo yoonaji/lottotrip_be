@@ -97,7 +97,7 @@ class SlotResultServiceTest extends PostgresContainerSupport {
                 .contentId("126508")
                 .contentTypeId("12")
                 .name("사천진해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원특별자치도 강릉시 사천면")
                 .latitude(37.8021)
                 .longitude(128.8954)
@@ -140,7 +140,7 @@ class SlotResultServiceTest extends PostgresContainerSupport {
         assertThat(response.slotId()).isEqualTo(slot.getId());
         assertThat(response.place().placeId()).isEqualTo(place.getId());
         assertThat(response.place().name()).isEqualTo("사천진해변");
-        assertThat(response.place().category()).isEqualTo("해변");
+        assertThat(response.place().category()).isEqualTo("자연관광지");
     }
 
     @Test

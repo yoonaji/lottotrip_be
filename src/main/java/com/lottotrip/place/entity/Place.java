@@ -101,8 +101,28 @@ public class Place {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    /**
+     * 장소 분류. TourAPI {@code cat2}를 그대로 옮긴 값이다. (roadmap 6-15, 결정 16)
+     *
+     * <h2>⚠️ 이 컬럼에는 CHECK 제약이 자동으로 붙는다 (결정 16)</h2>
+     * Hibernate는 {@code @Enumerated} 컬럼에 "이 값들만 허용"이라는 CHECK 제약을 만든다.
+     * 그런데 {@code ddl-auto: update}는 <b>이미 만들어진 제약을 고치지 않아서</b>, enum에 값을 더하면
+     * 그 값이 처음 저장되는 순간 실패한다(2026-08-15에 실제로 겪었다).
+     *
+     * <p><b>제약 생성을 막을 방법이 없다</b>(Hibernate 6.6). {@code columnDefinition} ·
+     * {@code @JdbcTypeCode(VARCHAR)} · {@code AttributeConverter}를 모두 시도했지만 전부 생성된다.
+     * 끄는 설정도 없다.
+     *
+     * <p><b>그래서 운영 절차로 푼다.</b> 제약은 <b>테이블을 만들 때만</b> 생기고
+     * {@code update}가 다시 붙이지는 않으므로, <b>기존 DB에서 한 번 지우면 그 DB에서는 다시 안 생긴다.</b>
+     * 새로 만드는 DB는 그 시점 enum으로 정확히 생성되므로 애초에 어긋나지 않는다.
+     * 근본 해결은 마이그레이션 도구(Flyway) 도입이다 — 배포 전에 정하기로 했다.
+     *
+     * <p>길이를 30으로 둔 이유: 가장 긴 상수명이 {@code NATURE_ATTRACTION}(17자)이고
+     * 분류가 더 늘 수 있어 여유를 뒀다.
+     */
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false, length = 30)
     private TravelCategory category;
 
     @Column(length = 255)

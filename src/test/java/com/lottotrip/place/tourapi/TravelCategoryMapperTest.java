@@ -4,133 +4,152 @@ import com.lottotrip.place.entity.TravelCategory;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * TourAPI 분류 코드 → 우리 {@link TravelCategory} 매핑 검증. (roadmap 5-9)
+ * TourAPI 분류 코드 → 우리 분류 매핑 검증. (roadmap 6-15, 결정 16)
  *
- * <p><b>1:1이 아니다.</b> TourAPI의 관광타입은 6종인데 우리 분류는 8종이고,
- * 특히 <b>관광지(12) 하나에 자연·해변·역사가 전부 들어 있다.</b>
- * 그래서 관광타입만으로는 못 나누고 분류코드({@code cat1}~{@code cat3})를 함께 본다.
+ * <p><b>⚠️ 6-15에서 기준이 통째로 바뀌었다.</b> 예전에는 관광타입({@code contenttypeid})과
+ * {@code cat1}~{@code cat3}를 섞어 11종으로 나눴는데, 지금은 <b>{@code cat2} 하나만</b> 본다.
  *
- * <p>TourAPI 대분류: {@code A01}=자연 · {@code A02}=인문(문화·역사) · {@code A03}=레포츠 ·
- * {@code A04}=쇼핑 · {@code A05}=음식
+ * <p><b>왜 바꿨나.</b> 여행 스타일 6종(휴식·맛집·감상·체험·활동·탐험)으로 후보를 거르려는데
+ * 기존 분류로는 <b>체험·활동·탐험이 전부 {@code LEISURE} 하나로 뭉쳤다.</b>
+ * {@code cat2}에는 "휴양관광지"·"체험관광지"가 이름 그대로 있어 그대로 쓸 수 있다.
  */
 class TravelCategoryMapperTest {
 
     private final TravelCategoryMapper mapper = new TravelCategoryMapper();
 
-    // ---------- 관광타입만으로 정해지는 것 ----------
+    // ---------- cat2 매핑 ----------
 
     @Test
-    @DisplayName("문화시설·레포츠·쇼핑은 관광타입만으로 정해진다")
-    void mapsByContentTypeAlone() {
-        assertThat(mapper.map("14", "A02", null, null)).isEqualTo(TravelCategory.CULTURE);
-        assertThat(mapper.map("28", "A03", null, null)).isEqualTo(TravelCategory.LEISURE);
-        assertThat(mapper.map("38", "A04", null, null)).isEqualTo(TravelCategory.SHOPPING);
-    }
-
-    // ---------- 관광지(12)를 분류코드로 나누기 ----------
-
-    @Test
-    @DisplayName("관광지 중 자연은 NATURE다")
-    void mapsNaturalTouristSpotToNature() {
-        // cat1 = A01(자연)
-        assertThat(mapper.map("12", "A01", "A0102", "A01021000")).isEqualTo(TravelCategory.NATURE);
+    @DisplayName("여행 스타일과 직접 이어지는 분류들 — 이것 때문에 cat2로 옮겼다")
+    void mapsStyleRelevantCategories() {
+        // 기존 11종에서는 아래 셋이 전부 LEISURE 하나로 뭉쳐 스타일을 나눌 수 없었다.
+        assertThat(mapper.map("A0202")).isEqualTo(TravelCategory.RELAXATION);   // 휴양 → 휴식형
+        assertThat(mapper.map("A0203")).isEqualTo(TravelCategory.EXPERIENCE);   // 체험 → 체험형
+        assertThat(mapper.map("A0302")).isEqualTo(TravelCategory.LAND_SPORTS);  // 육상 레포츠 → 활동형
     }
 
     @Test
-    @DisplayName("관광지 중 해수욕장은 BEACH다 — 자연이지만 따로 뽑는다")
-    void mapsBeachToBeach() {
-        // 슬롯 응답에 "해변"으로 나가는 값이다. 자연으로 뭉뚱그리면 사용자가 받는 결과가 밋밋해진다.
-        assertThat(mapper.map("12", "A01", "A0101", "A01011200")).isEqualTo(TravelCategory.BEACH);
+    @DisplayName("자연 계열 2종")
+    void mapsNature() {
+        assertThat(mapper.map("A0101")).isEqualTo(TravelCategory.NATURE_ATTRACTION);
+        assertThat(mapper.map("A0102")).isEqualTo(TravelCategory.NATURE_RESOURCE);
     }
 
     @Test
-    @DisplayName("관광지 중 역사관광지는 HISTORY다")
-    void mapsHistoricSiteToHistory() {
-        // cat2 = A0201(역사관광지)
-        assertThat(mapper.map("12", "A02", "A0201", "A02010100")).isEqualTo(TravelCategory.HISTORY);
+    @DisplayName("인문 계열 8종")
+    void mapsHumanities() {
+        assertThat(mapper.map("A0201")).isEqualTo(TravelCategory.HISTORY);
+        assertThat(mapper.map("A0204")).isEqualTo(TravelCategory.INDUSTRY);
+        assertThat(mapper.map("A0205")).isEqualTo(TravelCategory.ARCHITECTURE);
+        assertThat(mapper.map("A0206")).isEqualTo(TravelCategory.CULTURE_FACILITY);
+        assertThat(mapper.map("A0207")).isEqualTo(TravelCategory.FESTIVAL);
+        assertThat(mapper.map("A0208")).isEqualTo(TravelCategory.PERFORMANCE);
     }
 
     @Test
-    @DisplayName("관광지 중 역사가 아닌 인문은 CULTURE다")
-    void mapsOtherHumanitiesToCulture() {
-        // cat2 = A0203(체험관광지) 등
-        assertThat(mapper.map("12", "A02", "A0203", "A02030400")).isEqualTo(TravelCategory.CULTURE);
-    }
-
-    // ---------- 음식점(39)을 분류코드로 나누기 ----------
-
-    @Test
-    @DisplayName("음식점은 FOOD, 그중 카페는 CAFE다")
-    void mapsCafeApartFromFood() {
-        assertThat(mapper.map("39", "A05", "A0502", "A05020100")).isEqualTo(TravelCategory.FOOD);
-        assertThat(mapper.map("39", "A05", "A0502", "A05020900")).isEqualTo(TravelCategory.CAFE);
-    }
-
-    // ---------- 모르는 값이 와도 배치가 멈추면 안 된다 ----------
-
-    @Test
-    @DisplayName("모르는 관광타입이 와도 예외 없이 값을 준다")
-    void neverReturnsNullForUnknownType() {
-        // category는 NOT NULL이다. 여기서 null이나 예외가 나오면 그 장소 하나 때문에
-        // 배치 전체가 멈춘다. 수천 건을 훑는 작업에서 가장 나쁜 실패 방식이다.
-        assertThat(mapper.map("99", null, null, null)).isNotNull();
-        assertThat(mapper.map(null, null, null, null)).isNotNull();
-        assertThat(mapper.map("12", null, null, null)).isNotNull();
+    @DisplayName("레포츠 계열 5종")
+    void mapsSports() {
+        assertThat(mapper.map("A0301")).isEqualTo(TravelCategory.SPORTS_INFO);
+        assertThat(mapper.map("A0303")).isEqualTo(TravelCategory.WATER_SPORTS);
+        assertThat(mapper.map("A0304")).isEqualTo(TravelCategory.AIR_SPORTS);
+        assertThat(mapper.map("A0305")).isEqualTo(TravelCategory.MIXED_SPORTS);
     }
 
     @Test
-    @DisplayName("분류코드 대소문자가 달라도 같게 읽는다")
-    void isCaseInsensitive() {
-        assertThat(mapper.map("12", "a01", "a0101", "a01011200")).isEqualTo(TravelCategory.BEACH);
-    }
-
-    // ---------- 전 종류 매핑 (roadmap 6-10, 결정 13) ----------
-
-    @Test
-    @DisplayName("숙박은 LODGING이다 — 예전에는 NATURE로 떨어져 모텔이 '자연'으로 저장됐다")
-    void mapsLodging() {
-        // 결정 13으로 전 종류를 담게 되면서 숙박(32)이 실제로 들어온다.
-        // 대응 값이 없으면 기본값 NATURE로 떨어지는데, 그러면 응답에 "에쿠스모텔 · 자연"이 나간다.
-        assertThat(mapper.map("32", "B02", "B0201", "B02010900")).isEqualTo(TravelCategory.LODGING);
+    @DisplayName("쇼핑·음식·숙박")
+    void mapsShoppingFoodLodging() {
+        assertThat(mapper.map("A0401")).isEqualTo(TravelCategory.SHOPPING);
+        assertThat(mapper.map("A0502")).isEqualTo(TravelCategory.RESTAURANT);
+        assertThat(mapper.map("B0201")).isEqualTo(TravelCategory.LODGING);
     }
 
     @Test
-    @DisplayName("축제·공연·행사는 FESTIVAL이다")
-    void mapsFestival() {
-        assertThat(mapper.map("15", "A02", "A0207", "A02070100")).isEqualTo(TravelCategory.FESTIVAL);
+    @DisplayName("추천코스 6종")
+    void mapsCourses() {
+        assertThat(mapper.map("C0112")).isEqualTo(TravelCategory.FAMILY_COURSE);
+        assertThat(mapper.map("C0113")).isEqualTo(TravelCategory.SOLO_COURSE);
+        assertThat(mapper.map("C0114")).isEqualTo(TravelCategory.HEALING_COURSE);
+        assertThat(mapper.map("C0115")).isEqualTo(TravelCategory.WALKING_COURSE);
+        assertThat(mapper.map("C0116")).isEqualTo(TravelCategory.CAMPING_COURSE);
+        assertThat(mapper.map("C0117")).isEqualTo(TravelCategory.FOOD_COURSE);
     }
 
     @Test
-    @DisplayName("여행코스는 COURSE다")
-    void mapsCourse() {
-        assertThat(mapper.map("25", "C01", "C0112", "C01120001")).isEqualTo(TravelCategory.COURSE);
+    @DisplayName("TourAPI의 cat2 24종이 하나도 빠짐없이 매핑된다")
+    void coversEveryKnownCat2() {
+        // 빠뜨리면 그 분류의 장소가 전부 UNKNOWN으로 떨어져 스타일 필터에서 사라진다.
+        // 목록은 categoryCode2 실측(2026-08-15)으로 받은 전부다.
+        String[] allCat2 = {
+                "A0101", "A0102",
+                "A0201", "A0202", "A0203", "A0204", "A0205", "A0206", "A0207", "A0208",
+                "A0301", "A0302", "A0303", "A0304", "A0305",
+                "A0401", "A0502", "B0201",
+                "C0112", "C0113", "C0114", "C0115", "C0116", "C0117"};
+
+        assertThat(allCat2).allSatisfy(code ->
+                assertThat(mapper.map(code))
+                        .as("cat2 %s", code)
+                        .isNotEqualTo(TravelCategory.UNKNOWN));
     }
 
     @Test
-    @DisplayName("강원에 실제로 있는 8개 관광타입이 전부 고유한 분류로 간다 — 기본값으로 뭉치지 않는다")
-    void mapsEveryContentTypeDistinctly() {
-        // 실측(2026-08-15, areaCode=32)에 존재하는 종류 전부다.
-        // 하나라도 기본값으로 떨어지면 그 종류는 응답에서 정체를 알 수 없게 된다.
-        assertThat(mapper.map("12", "A01", null, null)).isEqualTo(TravelCategory.NATURE);
-        assertThat(mapper.map("14", null, null, null)).isEqualTo(TravelCategory.CULTURE);
-        assertThat(mapper.map("15", null, null, null)).isEqualTo(TravelCategory.FESTIVAL);
-        assertThat(mapper.map("25", null, null, null)).isEqualTo(TravelCategory.COURSE);
-        assertThat(mapper.map("28", null, null, null)).isEqualTo(TravelCategory.LEISURE);
-        assertThat(mapper.map("32", null, null, null)).isEqualTo(TravelCategory.LODGING);
-        assertThat(mapper.map("38", null, null, null)).isEqualTo(TravelCategory.SHOPPING);
-        assertThat(mapper.map("39", null, null, null)).isEqualTo(TravelCategory.FOOD);
+    @DisplayName("24종이 서로 다른 값으로 간다 — 둘이 같은 값이면 그만큼 못 나눈다")
+    void mapsEachCat2Distinctly() {
+        long distinct = Arrays.stream(TravelCategory.values())
+                .filter(c -> c != TravelCategory.UNKNOWN)
+                .map(TravelCategory::getCat2Code)
+                .collect(Collectors.toSet())
+                .size();
+
+        assertThat(distinct).isEqualTo(24);
     }
+
+    // ---------- 모르는 값 ----------
+
+    @Test
+    @DisplayName("모르는 cat2는 UNKNOWN이다 — 자연으로 둔갑시키지 않는다")
+    void fallsBackToUnknown() {
+        // 예전에는 기본값이 NATURE라 모르는 것이 조용히 "자연"으로 저장됐다.
+        // UNKNOWN이면 "TourAPI가 새 분류를 추가했다"를 나중에 조회로 찾아낼 수 있다.
+        assertThat(mapper.map("Z9999")).isEqualTo(TravelCategory.UNKNOWN);
+    }
+
+    @Test
+    @DisplayName("cat2가 비어 있어도 예외 없이 값을 준다 — category는 NOT NULL이다")
+    void neverReturnsNull() {
+        // 여기서 null이나 예외가 나오면 장소 하나 때문에 저장이 통째로 실패한다.
+        assertThat(mapper.map(null)).isEqualTo(TravelCategory.UNKNOWN);
+        assertThat(mapper.map("")).isEqualTo(TravelCategory.UNKNOWN);
+        assertThat(mapper.map("   ")).isEqualTo(TravelCategory.UNKNOWN);
+    }
+
+    @Test
+    @DisplayName("대소문자·공백이 달라도 같게 읽는다")
+    void normalizesInput() {
+        assertThat(mapper.map(" a0203 ")).isEqualTo(TravelCategory.EXPERIENCE);
+    }
+
+    // ---------- 표시명 ----------
 
     @Test
     @DisplayName("모든 분류에 사람이 읽을 이름이 있다 — 응답의 category로 그대로 나간다")
     void everyCategoryHasDisplayName() {
-        for (TravelCategory category : TravelCategory.values()) {
-            assertThat(category.getDisplayName())
-                    .as("%s의 displayName", category)
-                    .isNotBlank();
-        }
+        assertThat(TravelCategory.values()).allSatisfy(category ->
+                assertThat(category.getDisplayName()).as("%s", category).isNotBlank());
+    }
+
+    @Test
+    @DisplayName("표시명은 TourAPI가 쓰는 이름을 그대로 따른다")
+    void usesTourApiNames() {
+        // 우리가 지어내면 TourAPI 문서와 대조할 때 매번 번역해야 한다.
+        assertThat(TravelCategory.RELAXATION.getDisplayName()).isEqualTo("휴양관광지");
+        assertThat(TravelCategory.EXPERIENCE.getDisplayName()).isEqualTo("체험관광지");
+        assertThat(TravelCategory.RESTAURANT.getDisplayName()).isEqualTo("음식점");
     }
 }

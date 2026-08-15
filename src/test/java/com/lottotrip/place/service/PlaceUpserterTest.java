@@ -89,13 +89,13 @@ class PlaceUpserterTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("분류를 매핑해 담는다 — 해수욕장은 BEACH다")
+    @DisplayName("분류를 매핑해 담는다 — cat2(A0101)를 그대로 옮긴다")
     void mapsCategory() {
         seededGangwon();
 
         Place saved = upserter.upsert(item("126508", "사천진해변"));
 
-        assertThat(saved.getCategory()).isEqualTo(TravelCategory.BEACH);
+        assertThat(saved.getCategory()).isEqualTo(TravelCategory.NATURE_ATTRACTION);
     }
 
     @Test

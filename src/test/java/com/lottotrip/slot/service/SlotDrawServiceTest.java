@@ -172,14 +172,15 @@ class SlotDrawServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("카테고리는 한글 이름으로 나간다")
+    @DisplayName("카테고리는 TourAPI 표시명으로 나간다")
     void exposesCategoryAsDisplayName() {
-        // DB에는 BEACH로 저장하지만 응답에는 "해변"으로 나가야 한다(ERD 4-2 예시).
+        // DB에는 NATURE_ATTRACTION으로 저장하지만 응답에는 "자연관광지"로 나가야 한다.
+        // ⚠️ 예전에는 해수욕장이 "해변"으로 나갔다 — cat3라서 cat2 체계에서는 묻힌다(결정 16).
         expectDraw(oneCandidate("사천진해변", "", "1113.0"));
 
         SlotDrawResponse response = slotService.draw(user.getId(), walkRequest());
 
-        assertThat(response.place().category()).isEqualTo("해변");
+        assertThat(response.place().category()).isEqualTo("자연관광지");
     }
 
     @Test

@@ -79,7 +79,7 @@ class PlaceDetailServiceTest {
                 .contentId("126508")
                 .contentTypeId("12")
                 .name("사천진해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .address("강원특별자치도 강릉시 사천면")
                 .latitude(37.8021)
                 .longitude(128.8954)
@@ -95,7 +95,7 @@ class PlaceDetailServiceTest {
         PlaceDetail detail = service.describe(savedPlace());
 
         assertThat(detail.name()).isEqualTo("사천진해변");
-        assertThat(detail.category()).isEqualTo("해변");
+        assertThat(detail.category()).isEqualTo("자연관광지");
         assertThat(detail.latitude()).isEqualTo(37.8021);
         assertThat(detail.description()).contains("일출 명소");
         assertThat(detail.liveDetailLoaded()).isTrue();
@@ -183,7 +183,7 @@ class PlaceDetailServiceTest {
         Place noContentId = Place.builder()
                 .contentId(null)
                 .name("코드없는장소")
-                .category(TravelCategory.NATURE)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .latitude(37.0)
                 .longitude(128.0)
                 .build();

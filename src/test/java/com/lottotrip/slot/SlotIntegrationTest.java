@@ -131,7 +131,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.error").isEmpty())
                 .andExpect(jsonPath("$.data.slotId").isNumber())
                 .andExpect(jsonPath("$.data.place.name").value("사천진해변"))
-                .andExpect(jsonPath("$.data.place.category").value("해변"))
+                .andExpect(jsonPath("$.data.place.category").value("자연관광지"))
                 .andExpect(jsonPath("$.data.place.distanceKm").isNumber())
                 .andExpect(jsonPath("$.data.mission.missionId").isNumber())
                 .andExpect(jsonPath("$.data.mission.title").isNotEmpty());

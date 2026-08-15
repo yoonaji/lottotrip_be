@@ -61,7 +61,7 @@ class MissionMatcherTest extends PostgresContainerSupport {
                 .contentId("place-1")
                 .contentTypeId("12")
                 .name("사천진해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .latitude(37.8021)
                 .longitude(128.8954)
                 .build());
@@ -218,7 +218,7 @@ class MissionMatcherTest extends PostgresContainerSupport {
                 .contentId("place-2")
                 .contentTypeId("12")
                 .name("경포해변")
-                .category(TravelCategory.BEACH)
+                .category(TravelCategory.NATURE_ATTRACTION)
                 .latitude(37.7956)
                 .longitude(128.9089)
                 .build());
