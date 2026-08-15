@@ -93,9 +93,19 @@ public class RealtimePlaceFinder {
             TourApiService service, double latitude, double longitude,
             int radiusKm, String contentTypeId) {
 
-        List<TourApiPlaceItem> candidates = tourApiClient.fetchLocationBasedList(
+        List<TourApiPlaceItem> received = tourApiClient.fetchLocationBasedList(
                 service, latitude, longitude, radiusKm * 1000, contentTypeId, 1, MAX_CANDIDATES)
                 .items();
+
+        // 좌표가 없으면 places에 담을 수 없어(NOT NULL) 뽑아 놓고도 쓰지 못한다.
+        // 뽑기 전에 걸러야 "뽑았는데 저장이 실패하는" 상황이 생기지 않는다.
+        List<TourApiPlaceItem> candidates = received.stream()
+                .filter(item -> item.latitude() != null && item.longitude() != null)
+                .toList();
+
+        if (candidates.size() < received.size()) {
+            log.debug("좌표가 없는 후보 {}건을 제외했습니다", received.size() - candidates.size());
+        }
 
         if (candidates.isEmpty()) {
             log.debug("반경 {}km 안에 후보가 없습니다 — 좌표({}, {}), 종류 {}",

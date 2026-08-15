@@ -252,6 +252,20 @@ class RealtimePlaceFinderTest {
     }
 
     @Test
+    @DisplayName("좌표가 없는 후보는 뽑기 전에 걸러낸다 — 뽑아도 저장할 수 없다")
+    void excludesCandidateWithoutCoordinate() {
+        // places.latitude·longitude는 NOT NULL이다. 좌표 없는 것을 뽑으면
+        // 추첨은 성공했는데 저장에서 터지는, 되돌리기 곤란한 상태가 된다.
+        String withHole = listOf(2).replace("\"mapx\": \"128.88\", \"mapy\": \"37.80\"",
+                "\"mapx\": \"\", \"mapy\": \"\"");
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(withHole, MediaType.APPLICATION_JSON));
+
+        // 2건 중 좌표 있는 것이 하나도 없으면 후보가 비어야 한다
+        assertThat(finderPicking(0).drawOne(TourApiService.KOREAN, LAT, LNG, 30, null)).isEmpty();
+    }
+
+    @Test
     @DisplayName("후보가 없으면 난수를 아예 쓰지 않는다")
     void doesNotDrawWhenEmpty() {
         // nextInt(0)은 IllegalArgumentException이다. 빈 목록을 먼저 걸러야 한다.
