@@ -190,11 +190,27 @@ public class TourApiClient {
     public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
             TourApiService service, double latitude, double longitude,
             int radiusMeters, String contentTypeId, int pageNo) {
+        return fetchLocationBasedList(
+                service, latitude, longitude, radiusMeters, contentTypeId, pageNo, properties.numOfRows());
+    }
+
+    /**
+     * 페이지 크기까지 지정하는 형태. (roadmap 6-11)
+     *
+     * <p>추첨은 후보 <b>전체</b>를 한 번에 받아야 그중에서 고를 수 있으므로 설정값(기본 100)이 아니라
+     * API 상한인 1,000을 직접 넘긴다. 반면 다른 조회는 그렇게 크게 받을 이유가 없다.
+     * "얼마나 받을지"는 부르는 쪽의 사정이라 인자로 열어 둔다.
+     *
+     * @param numOfRows 한 번에 받을 건수. <b>API 상한은 1,000이고 넘겨도 1,000까지만 온다</b>(실측)
+     */
+    public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
+            TourApiService service, double latitude, double longitude,
+            int radiusMeters, String contentTypeId, int pageNo, int numOfRows) {
 
         requireValidRadius(radiusMeters);
 
         Map<String, Object> params = params(
-                "numOfRows", properties.numOfRows(),
+                "numOfRows", numOfRows,
                 "pageNo", pageNo,
                 "mapX", longitude,   // x = 경도
                 "mapY", latitude,    // y = 위도
@@ -210,7 +226,7 @@ public class TourApiClient {
                 call(uri(service, OP_LOCATION_BASED_LIST, params),
                         new ParameterizedTypeReference<TourApiResponse<TourApiPlaceItem>>() {
                         });
-        return TourApiPage.from(response, pageNo, properties.numOfRows());
+        return TourApiPage.from(response, pageNo, numOfRows);
     }
 
     /**
