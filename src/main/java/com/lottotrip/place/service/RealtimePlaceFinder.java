@@ -63,7 +63,7 @@ public class RealtimePlaceFinder {
      * <p>{@code @Autowired}를 붙인 이유: 생성자가 둘 이상이면 스프링은 어느 것을 쓸지 알 수 없어
      * 기본 생성자를 찾다가 <b>{@code No default constructor found}로 기동 자체가 실패한다.</b>
      * 하나만 있을 때는 자동으로 골라 주므로 생략할 수 있지만, 아래 테스트용 생성자가 함께 있으므로
-     * 어느 쪽인지 표시해 줘야 한다. ({@code PlaceDrawer}와 같은 이유)
+     * 어느 쪽인지 표시해 줘야 한다. ({@code MissionMatcher}도 같은 이유로 붙어 있다)
      */
     @Autowired
     public RealtimePlaceFinder(TourApiClient tourApiClient) {

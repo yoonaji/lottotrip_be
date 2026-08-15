@@ -1,7 +1,6 @@
 package com.lottotrip.slot.dto;
 
 import com.lottotrip.mission.entity.Mission;
-import com.lottotrip.place.dto.PlaceCandidate;
 import com.lottotrip.place.entity.Place;
 
 /**

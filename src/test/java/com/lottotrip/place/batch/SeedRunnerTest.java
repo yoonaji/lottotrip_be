@@ -33,40 +33,28 @@ class SeedRunnerTest {
         };
     }
 
-    private static PlaceSeeder fakePlaceSeeder(Recorder recorder) {
-        return new PlaceSeeder(null, null, null, null, null, null) {
-            @Override
-            public void seed(String areaCode) {
-                recorder.calls.add("place:" + areaCode);
-            }
-        };
-    }
-
     @Test
-    @DisplayName("지역을 먼저 시드하고 그다음 장소를 적재한다")
-    void seedsRegionBeforePlaces() throws Exception {
-        // ⚠️ 순서가 중요하다. 장소 적재는 areacode·sigungucode로 시·군을 찾는데,
-        // 지역 시드가 먼저 돌지 않으면 표가 비어 있어 places.city_id가 전부 NULL이 된다.
-        // 적재가 멈추지는 않아서(의도된 동작) 순서를 틀려도 조용히 지나간다.
+    @DisplayName("지역 시드를 돌린다 — 장소 적재는 결정 12로 사라졌다")
+    void seedsRegion() throws Exception {
+        // 예전에는 지역 → 장소 순서를 고정하는 것이 이 테스트의 핵심이었다.
+        // 온디맨드로 바뀌며 장소는 뽑힐 때마다 PlaceUpserter가 담으므로 시드할 것이 없다.
         Recorder recorder = new Recorder();
-        SeedRunner runner = new SeedRunner(
-                fakeRegionSeeder(recorder), fakePlaceSeeder(recorder), "32");
+        SeedRunner runner = new SeedRunner(fakeRegionSeeder(recorder), "32");
 
         runner.run();
 
-        assertThat(recorder.calls).containsExactly("region:32", "place:32");
+        assertThat(recorder.calls).containsExactly("region:32");
     }
 
     @Test
-    @DisplayName("설정한 지역 코드를 두 시드에 그대로 넘긴다")
+    @DisplayName("설정한 지역 코드를 그대로 넘긴다")
     void passesConfiguredAreaCode() throws Exception {
         Recorder recorder = new Recorder();
-        SeedRunner runner = new SeedRunner(
-                fakeRegionSeeder(recorder), fakePlaceSeeder(recorder), "39");
+        SeedRunner runner = new SeedRunner(fakeRegionSeeder(recorder), "39");
 
         runner.run();
 
-        assertThat(recorder.calls).containsExactly("region:39", "place:39");
+        assertThat(recorder.calls).containsExactly("region:39");
     }
 
     // ---------- 평소에는 빈이 아예 만들어지지 않는다 ----------
@@ -74,7 +62,6 @@ class SeedRunnerTest {
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withConfiguration(AutoConfigurations.of())
             .withBean(RegionSeeder.class, () -> fakeRegionSeeder(new Recorder()))
-            .withBean(PlaceSeeder.class, () -> fakePlaceSeeder(new Recorder()))
             .withUserConfiguration(SeedRunner.class);
 
     @Test

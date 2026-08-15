@@ -39,7 +39,7 @@ public class MissionMatcher {
     private final MissionRepository missionRepository;
     private final MissionGenerator missionGenerator;
 
-    /** 난수원. 공급자로 받는 이유는 {@code PlaceDrawer}와 같다(스레드 안전 + 테스트 고정). */
+    /** 난수원. 공급자로 받는 이유는 {@code RealtimePlaceFinder}와 같다(스레드 안전 + 테스트 고정). */
     private final Supplier<RandomGenerator> randomSource;
 
     /**

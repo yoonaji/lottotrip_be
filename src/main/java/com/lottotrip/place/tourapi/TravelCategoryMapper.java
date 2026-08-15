@@ -3,14 +3,15 @@ package com.lottotrip.place.tourapi;
 import com.lottotrip.place.entity.TravelCategory;
 import org.springframework.stereotype.Component;
 
-import java.util.Set;
-
 /**
- * TourAPI 분류 코드를 우리 {@link TravelCategory}로 옮긴다. (roadmap 5-9)
+ * TourAPI 분류 코드를 우리 {@link TravelCategory}로 옮긴다. (roadmap 6-10)
  *
- * <p><b>왜 따로 두는가.</b> TourAPI의 관광타입은 6종인데 우리 분류는 8종이라 1:1이 아니다.
+ * <p><b>왜 따로 두는가.</b> TourAPI의 관광타입은 8종인데 우리 분류는 11종이라 1:1이 아니다.
  * 특히 <b>관광타입 12(관광지) 하나에 자연·해변·역사가 전부 들어 있어</b> 관광타입만으로는 못 나눈다.
- * 이 규칙을 적재 코드 안에 섞어 두면 "무엇을 담을까"와 "어떻게 분류할까"가 엉켜서 나중에 못 고친다.
+ * 이 규칙을 저장 코드 안에 섞어 두면 "무엇을 담을까"와 "어떻게 분류할까"가 엉켜서 나중에 못 고친다.
+ *
+ * <p>⚠️ <b>"담을지 말지"는 더 이상 여기서 정하지 않는다.</b> 결정 13으로 종류 제한은
+ * 요청의 {@code contentTypeId}가 API 단계에서 하므로, 우리가 받아서 거를 일이 없다.
  *
  * <h2>TourAPI 분류 체계</h2>
  * 코드가 세 겹으로 좁혀진다. {@code cat1}(대분류) → {@code cat2}(중분류) → {@code cat3}(소분류).
@@ -21,8 +22,8 @@ import java.util.Set;
  * </ul>
  *
  * <p>⚠️ <b>세부 코드는 실물 데이터로 확인이 필요하다.</b> 아래 {@code CAT3_*}·{@code CAT2_*} 상수는
- * 문서 기준이며, 5-9 적재를 실제로 돌려 본 뒤 어긋나면 <b>이 상수들만</b> 고치면 된다.
- * 틀려도 {@link #DEFAULT_CATEGORY}로 떨어질 뿐 적재가 멈추지는 않는다.
+ * 문서 기준이며, 어긋나면 <b>이 상수들만</b> 고치면 된다.
+ * 틀려도 {@link #DEFAULT_CATEGORY}로 떨어질 뿐 저장이 멈추지는 않는다.
  */
 @Component
 public class TravelCategoryMapper {
@@ -37,19 +38,6 @@ public class TravelCategoryMapper {
     private static final String TYPE_LODGING = "32";
     private static final String TYPE_SHOPPING = "38";
     private static final String TYPE_RESTAURANT = "39";
-
-    /**
-     * 배치 시절의 적재 대상 필터. <b>⛔ 결정 12·13으로 역할이 끝났다.</b>
-     *
-     * <p>온디맨드에서는 종류 제한을 <b>요청의 {@code contentTypeId}가 API 단계에서</b> 한다.
-     * 우리가 받아서 거를 일이 없다.
-     *
-     * <p><b>지금 지우지 않는 이유:</b> 아직 {@code PlaceSeeder}가 쓰고 있다.
-     * 그 클래스를 제거하는 6-14에서 이 상수와 {@link #isTargetContentType}도 함께 지운다.
-     * 먼저 지우면 6-10 단계에서 컴파일이 깨져 "한 단계씩 통과시킨다"는 규칙을 어기게 된다.
-     */
-    private static final Set<String> TARGET_CONTENT_TYPES =
-            Set.of(TYPE_TOURIST_SPOT, TYPE_CULTURAL_FACILITY, TYPE_LEISURE);
 
     // ---------- 분류 코드 (cat1 ~ cat3) ----------
 
@@ -73,16 +61,6 @@ public class TravelCategoryMapper {
      * 즉 이 기본값은 <b>TourAPI가 새 종류를 추가했을 때만</b> 쓰여야 한다.
      */
     private static final TravelCategory DEFAULT_CATEGORY = TravelCategory.NATURE;
-
-    /**
-     * 이 관광타입을 적재할 것인가.
-     *
-     * <p>분류({@link #map})와 나눠 둔 이유: "담을지 말지"와 "담는다면 무엇으로 볼지"는 다른 판단이다.
-     * 나중에 음식점까지 담기로 해도 매핑 규칙은 그대로 쓴다.
-     */
-    public boolean isTargetContentType(String contentTypeId) {
-        return contentTypeId != null && TARGET_CONTENT_TYPES.contains(contentTypeId.trim());
-    }
 
     /**
      * 관광타입과 분류코드를 보고 우리 분류를 정한다.
