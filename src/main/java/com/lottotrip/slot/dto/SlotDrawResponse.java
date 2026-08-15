@@ -43,15 +43,19 @@ public record SlotDrawResponse(
     }
 
     /**
-     * 뽑은 결과를 응답 모양으로 옮긴다.
+     * 뽑은 결과를 응답 모양으로 옮긴다. (roadmap 6-13)
      *
-     * <p>거리를 <b>소수 첫째 자리로 줄인다.</b> Haversine이 준 값을 그대로 흘리면
-     * {@code 1.1119492636...}처럼 의미 없는 자릿수가 응답에 나간다. 반경이 10km·30km 단위라
+     * <p>⚠️ <b>거리와 이미지는 우리 DB가 아니라 방금 받은 API 응답에서 온다.</b>
+     * 좌표 기반 조회가 {@code dist}(거리)와 {@code firstimage}(대표 이미지)를 함께 주므로
+     * 거리를 계산할 필요도, {@code place_media}를 다시 조회할 필요도 없다.
+     * 거리를 소수 첫째 자리로 줄이는 것은 부르는 쪽이 한다 — 반경이 10km·30km 단위라
      * 100m보다 세밀한 값은 쓸 데가 없다.
+     *
+     * @param distanceKm   기준 좌표로부터의 거리. 이미 반올림된 값을 받는다
+     * @param thumbnailUrl 대표 이미지. 없으면 null
      */
-    public static SlotDrawResponse of(Long slotId, PlaceCandidate candidate,
+    public static SlotDrawResponse of(Long slotId, Place place, Double distanceKm,
                                       String thumbnailUrl, Mission mission) {
-        Place place = candidate.place();
         return new SlotDrawResponse(
                 slotId,
                 new PlaceInfo(
@@ -60,7 +64,7 @@ public record SlotDrawResponse(
                         place.getCategory().getDisplayName(),
                         place.getLatitude(),
                         place.getLongitude(),
-                        Math.round(candidate.distanceKm() * 10) / 10.0,
+                        distanceKm,
                         thumbnailUrl),
                 mission == null ? null : new MissionInfo(mission.getId(), mission.getTitle()));
     }

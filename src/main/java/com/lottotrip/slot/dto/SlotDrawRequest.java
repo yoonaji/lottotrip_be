@@ -19,15 +19,34 @@ import jakarta.validation.constraints.PositiveOrZero;
  * <p>{@code @NotNull}·{@code @NotBlank}는 컨트롤러에서 {@code @Valid}를 붙이면
  * <b>메서드에 들어오기 전에</b> 검사된다. 그래서 서비스가 "값이 있는지" 확인하는 if문으로 차지 않는다.
  *
- * @param latitude  현재(숙소) 위도
- * @param longitude 현재(숙소) 경도
- * @param budget    예산(원). 등급이 아니라 금액으로 받아 {@code BudgetLevel}이 등급으로 바꾼다
- * @param transport {@code walk}(도보·택시) / {@code car}(자차). 대소문자는 가리지 않는다
+ * @param latitude      현재(숙소) 위도
+ * @param longitude     현재(숙소) 경도
+ * @param budget        예산(원). 등급이 아니라 금액으로 받아 {@code BudgetLevel}이 등급으로 바꾼다.
+ *                      ⚠️ <b>추첨 필터로는 쓰지 않는다</b>(결정 9) — 세션에 기록만 된다
+ * @param transport     {@code walk}(도보·택시) / {@code car}(자차). 대소문자는 가리지 않는다
+ * @param accessible    무장애 정보가 등록된 장소만 뽑을지. 안 보내면 {@code false} (roadmap 6-13)
+ * @param contentTypeId 관광 타입 코드(12=관광지, 39=음식점 …). <b>안 보내면 전 종류가 대상이다</b>(결정 13)
  */
 public record SlotDrawRequest(
         @NotNull Double latitude,
         @NotNull Double longitude,
         @NotNull @PositiveOrZero Integer budget,
-        @NotBlank String transport
+        @NotBlank String transport,
+        Boolean accessible,
+        String contentTypeId
 ) {
+
+    /**
+     * 안 보냈을 때의 기본값을 여기서 정한다.
+     *
+     * <p>record의 <b>compact 생성자</b>는 값이 필드에 담기기 직전에 끼어든다.
+     * 여기서 채워 두면 이 값을 쓰는 쪽이 <b>매번 null을 확인하지 않아도 된다.</b>
+     * 서비스에 {@code request.accessible() != null && request.accessible()} 같은 코드가 흩어지면
+     * 한 곳에서 빠뜨렸을 때 조용히 다르게 동작한다.
+     */
+    public SlotDrawRequest {
+        if (accessible == null) {
+            accessible = false;
+        }
+    }
 }

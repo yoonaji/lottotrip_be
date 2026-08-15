@@ -104,12 +104,22 @@ class SlotResultServiceTest extends PostgresContainerSupport {
                 .build());
     }
 
-    /** 이 회원이 뽑은 슬롯 하나를 만든다. */
+    /** 이 회원이 뽑은 슬롯 하나를 만든다. 미션 없이 뽑힌 경우다. */
     private SavedSlot savedSlotOf(User owner) {
+        return savedSlotOf(owner, null);
+    }
+
+    /**
+     * 미션까지 제시된 슬롯을 만든다. (결정 14)
+     *
+     * <p>draw가 실제로 하는 일과 같다 — 제시한 미션을 슬롯에 함께 남긴다.
+     * 이 값이 있어야 조회가 <b>draw 때 보여 준 바로 그 미션</b>을 돌려줄 수 있다.
+     */
+    private SavedSlot savedSlotOf(User owner, Mission presented) {
         TripSession session = tripSessionRepository.save(TripSession.create(
                 owner, com.lottotrip.common.enums.BudgetLevel.MEDIUM,
                 TransportType.WALK, 37.7519, 128.8761));
-        return savedSlotRepository.save(SavedSlot.create(session, place));
+        return savedSlotRepository.save(SavedSlot.create(session, place, presented));
     }
 
     private void expectDetailCall() {
@@ -163,11 +173,11 @@ class SlotResultServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("그 장소의 미션을 함께 준다")
+    @DisplayName("draw 때 제시했던 그 미션을 돌려준다 (결정 14)")
     void returnsMission() {
         Mission mission = missionRepository.save(
                 Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
-        SavedSlot slot = savedSlotOf(user);
+        SavedSlot slot = savedSlotOf(user, mission);
         expectDetailCall();
 
         SlotResultResponse response = slotResultService.getResult(user.getId(), slot.getId());
@@ -178,14 +188,14 @@ class SlotResultServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("여러 번 조회해도 같은 미션이 나온다")
+    @DisplayName("장소에 미션이 여럿이어도 제시했던 것만 나온다 — 조회할 때마다 바뀌지 않는다")
     void returnsSameMissionOnRepeatedCalls() {
-        // ⚠️ saved_slots에 미션을 저장하지 않아 draw 때 보여 준 미션과는 다를 수 있다(미결).
-        //    적어도 "조회할 때마다 미션이 바뀌는" 일은 없어야 한다 — 그건 명백한 버그로 보인다.
+        // 결정 14 이전에는 "가장 먼저 등록된 미션"을 돌려줘서 draw가 보여 준 것과 달라질 수 있었다.
+        // 이제 슬롯에 남은 것을 그대로 읽으므로, 후보가 여럿이어도 제시했던 B가 계속 나온다.
         missionRepository.save(Mission.create(place, "미션 A", "설명", null, 100));
-        missionRepository.save(Mission.create(place, "미션 B", "설명", null, 100));
+        Mission presented = missionRepository.save(Mission.create(place, "미션 B", "설명", null, 100));
         missionRepository.save(Mission.create(place, "미션 C", "설명", null, 100));
-        SavedSlot slot = savedSlotOf(user);
+        SavedSlot slot = savedSlotOf(user, presented);
         mockServer.expect(ExpectedCount.times(3), requestTo(containsString("detailCommon2")))
                 .andRespond(withSuccess(DETAIL_RESPONSE, MediaType.APPLICATION_JSON));
 
@@ -194,6 +204,7 @@ class SlotResultServiceTest extends PostgresContainerSupport {
         Long third = slotResultService.getResult(user.getId(), slot.getId()).mission().missionId();
 
         assertThat(first).isEqualTo(second).isEqualTo(third);
+        assertThat(first).isEqualTo(presented.getId());
     }
 
     @Test

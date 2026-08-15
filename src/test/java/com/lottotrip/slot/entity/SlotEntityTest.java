@@ -138,7 +138,7 @@ class SlotEntityTest extends PostgresContainerSupport {
     void assignsSlotIdAndCreatedAt() {
         TripSession session = sampleSession();
         entityManager.persist(session);
-        SavedSlot slot = SavedSlot.create(session, persistedPlace("사천진해변"));
+        SavedSlot slot = SavedSlot.create(session, persistedPlace("사천진해변"), null);
 
         entityManager.persist(slot);
         entityManager.flush();
@@ -153,7 +153,7 @@ class SlotEntityTest extends PostgresContainerSupport {
     void slotLinksSessionAndPlace() {
         TripSession session = sampleSession();
         entityManager.persist(session);
-        SavedSlot slot = SavedSlot.create(session, persistedPlace("사천진해변"));
+        SavedSlot slot = SavedSlot.create(session, persistedPlace("사천진해변"), null);
         entityManager.persist(slot);
         entityManager.flush();
         entityManager.clear();
@@ -171,8 +171,8 @@ class SlotEntityTest extends PostgresContainerSupport {
         entityManager.persist(session);
         Place place = persistedPlace("사천진해변");
 
-        entityManager.persist(SavedSlot.create(session, place));
-        entityManager.persist(SavedSlot.create(session, place));
+        entityManager.persist(SavedSlot.create(session, place, null));
+        entityManager.persist(SavedSlot.create(session, place, null));
 
         entityManager.flush(); // 예외 없이 통과해야 한다
     }

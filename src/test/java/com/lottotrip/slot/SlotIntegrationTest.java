@@ -1,11 +1,9 @@
 package com.lottotrip.slot;
 
 import com.lottotrip.auth.jwt.JwtProvider;
-import com.lottotrip.place.entity.Place;
-import com.lottotrip.place.entity.PlaceMedia;
-import com.lottotrip.place.entity.TravelCategory;
-import com.lottotrip.place.repository.PlaceMediaRepository;
 import com.lottotrip.place.repository.PlaceRepository;
+import com.lottotrip.place.service.RealtimePlaceFinder;
+import com.lottotrip.place.tourapi.TourApiPlaceItem;
 import com.lottotrip.slot.repository.SavedSlotRepository;
 import com.lottotrip.slot.repository.TripSessionRepository;
 import com.lottotrip.support.PostgresContainerSupport;
@@ -19,10 +17,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,9 +40,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <b>HTTP 경계에서만 드러나는 것</b>을 본다 — 인증이 실제로 걸리는가, 요청 본문 검증이 도는가,
  * 공통 응답 포맷과 에러 코드가 명세대로 나가는가.
  *
- * <p><b>바깥 호출은 나가지 않는다.</b> 인증키를 빈 값으로 두면 {@code TourApiClient}가
- * 네트워크를 타기 전에 멈추고, {@code PlaceDetailService}가 그 실패를 삼켜
- * {@code liveDetailLoaded=false}로 응답한다. 테스트가 공공 API 상태에 좌우되지 않는다.
+ * <p><b>바깥 호출은 나가지 않는다.</b> 두 겹으로 막는다.
+ * <ul>
+ *   <li><b>추첨</b> — {@code RealtimePlaceFinder}를 {@code @MockitoBean}으로 바꿔 끼운다.
+ *       결정 12로 draw가 공공 API를 실시간 호출하게 되어, 막지 않으면 테스트가
+ *       <b>돌 때마다 일일 할당량을 깎는다.</b> 무엇이 뽑히는지는 6-11이 이미 검증했으므로
+ *       여기서는 "뽑힌 것이 HTTP 응답까지 제대로 흘러가는가"만 본다</li>
+ *   <li><b>세부조회</b> — 인증키를 빈 값으로 두면 {@code TourApiClient}가 네트워크를 타기 전에 멈추고
+ *       {@code PlaceDetailService}가 그 실패를 삼켜 {@code liveDetailLoaded=false}로 응답한다</li>
+ * </ul>
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -65,11 +76,13 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Autowired
     private PlaceRepository placeRepository;
     @Autowired
-    private PlaceMediaRepository placeMediaRepository;
-    @Autowired
     private TripSessionRepository tripSessionRepository;
     @Autowired
     private SavedSlotRepository savedSlotRepository;
+
+    /** 추첨만 가짜로 바꾼다. 저장·미션·응답 조립은 진짜가 돈다. */
+    @MockitoBean
+    private RealtimePlaceFinder realtimePlaceFinder;
 
     private User user;
     private String token;
@@ -82,16 +95,24 @@ class SlotIntegrationTest extends PostgresContainerSupport {
         token = "Bearer " + jwtProvider.createAccessToken(user.getId());
     }
 
-    private Place placeAt(String name, double latitude, double longitude) {
-        return placeRepository.save(Place.builder()
-                .contentId("it-" + (++sequence))
-                .contentTypeId("12")
-                .name(name)
-                .category(TravelCategory.BEACH)
-                .address("강원특별자치도 강릉시")
-                .latitude(latitude)
-                .longitude(longitude)
-                .build());
+    /** 이 이름의 장소가 뽑히도록 해 둔다. */
+    private void givenDrawn(String name) {
+        givenDrawn(name, "");
+    }
+
+    private void givenDrawn(String name, String thumbnailUrl) {
+        TourApiPlaceItem item = new TourApiPlaceItem(
+                "it-" + (++sequence), "12", name, "강원특별자치도 강릉시", "",
+                "32", "1", "A01", "A0101", "A01011200",
+                thumbnailUrl, "", "128.8954", "37.8021", "1113.0", "20240115103045");
+        given(realtimePlaceFinder.drawOne(any(), anyDouble(), anyDouble(), anyInt(), any()))
+                .willReturn(Optional.of(item));
+    }
+
+    /** 반경 안에 후보가 하나도 없는 상황. */
+    private void givenNothingDrawn() {
+        given(realtimePlaceFinder.drawOne(any(), anyDouble(), anyDouble(), anyInt(), any()))
+                .willReturn(Optional.empty());
     }
 
     // ---------- 슬롯 돌리기 ----------
@@ -99,7 +120,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("슬롯을 돌리면 장소와 미션이 공통 포맷으로 나간다")
     void drawReturnsPlaceAndMission() throws Exception {
-        placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
+        givenDrawn("사천진해변");
 
         mockMvc.perform(post(DRAW_PATH)
                         .header("Authorization", token)
@@ -119,9 +140,8 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("대표 이미지가 있으면 thumbnailUrl로 나간다")
     void drawExposesThumbnail() throws Exception {
-        Place place = placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
-        placeMediaRepository.save(PlaceMedia.create(
-                place, "https://cdn.example.com/beach.jpg", com.lottotrip.common.enums.MediaType.IMAGE));
+        // 결정 12로 이미지가 DB가 아니라 목록 응답에서 바로 온다.
+        givenDrawn("사천진해변", "https://cdn.example.com/beach.jpg");
 
         mockMvc.perform(post(DRAW_PATH)
                         .header("Authorization", token)
@@ -134,8 +154,9 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("반경 안에 후보가 없으면 404 SLOT_001")
     void drawFailsWithNoPlaceFound() throws Exception {
-        // 강원 밖 좌표로 돌리면 실제로 이 상황이 된다(적재가 강원 한정).
-        placeAt("멀리 있는 곳", CENTER_LAT + 1.0, CENTER_LNG + 1.0);
+        // 결정 12로 전국이 동작하므로 "강원 밖이라 없다"는 상황은 사라졌다.
+        // 이제는 바다 한가운데처럼 반경 안에 등록된 장소가 정말 없을 때다.
+        givenNothingDrawn();
 
         mockMvc.perform(post(DRAW_PATH)
                         .header("Authorization", token)
@@ -176,7 +197,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("정의되지 않은 이동수단은 400")
     void drawRejectsUnknownTransport() throws Exception {
-        placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
+        givenDrawn("사천진해변");
 
         mockMvc.perform(post(DRAW_PATH)
                         .header("Authorization", token)
@@ -193,8 +214,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("처음 돌리면 세션이 새로 생기고, 이어서 돌리면 그 세션을 다시 쓴다")
     void reusesSessionAcrossDraws() throws Exception {
-        placeAt("A", CENTER_LAT + 0.01, CENTER_LNG);
-        placeAt("B", CENTER_LAT + 0.02, CENTER_LNG);
+        givenDrawn("A");
 
         mockMvc.perform(post(DRAW_PATH).header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(WALK_REQUEST));
@@ -210,7 +230,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("회원이 다르면 세션도 따로 만든다")
     void separatesSessionsPerUser() throws Exception {
-        placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
+        givenDrawn("사천진해변");
         User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
         String otherToken = "Bearer " + jwtProvider.createAccessToken(other.getId());
 
@@ -227,7 +247,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("돌린 결과를 slotId로 다시 조회한다")
     void fetchesResultBySlotId() throws Exception {
-        placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
+        givenDrawn("사천진해변");
         String body = mockMvc.perform(post(DRAW_PATH)
                         .header("Authorization", token)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -257,7 +277,7 @@ class SlotIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("남의 슬롯을 조회해도 404 SLOT_002 — 있다는 사실조차 알려주지 않는다")
     void resultHidesOtherUsersSlot() throws Exception {
-        placeAt("사천진해변", CENTER_LAT + 0.01, CENTER_LNG);
+        givenDrawn("사천진해변");
         User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
         String otherToken = "Bearer " + jwtProvider.createAccessToken(other.getId());
         mockMvc.perform(post(DRAW_PATH).header("Authorization", otherToken)

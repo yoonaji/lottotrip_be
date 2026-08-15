@@ -70,16 +70,19 @@ public class SlotResultService {
     }
 
     /**
-     * 이 슬롯의 장소에 붙은 미션.
+     * 이 슬롯에서 제시했던 미션. (roadmap 6-13, 결정 14)
      *
-     * <p>⚠️ <b>draw 때 보여 준 그 미션이라는 보장이 없다.</b> {@code saved_slots}에는
-     * {@code mission_id}가 없어서(ERD 기준) 어떤 미션을 제시했는지 남기지 않는다.
-     * 그래서 <b>가장 먼저 등록된 것</b>을 돌려준다 — 적어도 같은 슬롯을 여러 번 조회할 때
-     * 미션이 매번 바뀌지는 않는다. 이 어긋남을 어떻게 없앨지는 <b>미확정</b>이며,
-     * {@code saved_slots}에 컬럼을 더하는 방법이 유력하다(스키마 변경이라 회의에서 정한다).
+     * <p>✅ <b>draw 때 보여 준 바로 그 미션이다.</b> {@code saved_slots.mission_id}에 남겨 두므로
+     * 다시 고를 필요가 없다.
+     *
+     * <p>예전에는 이 컬럼이 없어 "그 장소의 가장 먼저 등록된 미션"을 돌려줬는데, draw가 보여 준 것과
+     * 달라질 수 있었다. 2026-08-15 실측에서 실제로 재현됐다 — draw는 {@code missionId 3},
+     * 같은 슬롯의 조회는 {@code 1}. 사용자에게는 <b>슬롯을 다시 열었더니 미션이 바뀐</b> 것으로 보인다.
+     *
+     * <p><b>옛 슬롯은 여전히 비어 있다.</b> 컬럼이 생기기 전에 저장된 것에는 값이 없어 null이 나간다.
+     * 미션은 곁들이는 정보라 없어도 응답은 정상이다.
      */
     private Mission missionOf(SavedSlot slot) {
-        return missionRepository.findFirstByPlaceIdOrderByIdAsc(slot.getPlace().getId())
-                .orElse(null);
+        return slot.getMission();
     }
 }

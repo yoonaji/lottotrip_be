@@ -53,13 +53,13 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
         // 이 테스트는 세션 확보만 본다. 추첨·미션 쪽 의존은 getOrCreateActiveSession이
         // 건드리지 않으므로 넘기지 않는다. 실수로 쓰이면 즉시 NPE로 드러난다.
         slotService = new SlotService(tripSessionRepository, userRepository,
-                null, null, null, null, null);
+                null, null, null, null);
         user = userRepository.save(User.create("a@test.com", "테스터", null));
     }
 
     /** 강릉 좌표 / 5만원 / 도보 기준 요청. */
     private SlotDrawRequest walkRequest() {
-        return new SlotDrawRequest(37.7519, 128.8761, 50_000, "walk");
+        return new SlotDrawRequest(37.7519, 128.8761, 50_000, "walk", null, null);
     }
 
     /**
@@ -110,7 +110,7 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
 
         User another = userRepository.save(User.create("b@test.com", "테스터2", null));
         TripSession car = slotService.getOrCreateActiveSession(
-                another.getId(), new SlotDrawRequest(37.7519, 128.8761, 50_000, "car"));
+                another.getId(), new SlotDrawRequest(37.7519, 128.8761, 50_000, "car", null, null));
         assertThat(car.getSearchRadiusKm()).isEqualTo(30);
     }
 
@@ -138,7 +138,7 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
         ageSession(first, 1);
 
         TripSession reused = slotService.getOrCreateActiveSession(
-                user.getId(), new SlotDrawRequest(38.2070, 128.5918, 300_000, "car"));
+                user.getId(), new SlotDrawRequest(38.2070, 128.5918, 300_000, "car", null, null));
 
         assertThat(reused.getId()).isEqualTo(first.getId());
         assertThat(reused.getTransportation()).isEqualTo(TransportType.WALK);
@@ -205,7 +205,7 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
     void rejectsUnknownTransport() {
         // 여기서 걸러 내지 않으면 "조건에 맞는 장소가 없다"는 뜻의 404가 나가서
         // 잘못 보낸 쪽이 원인을 알기 어렵다.
-        SlotDrawRequest request = new SlotDrawRequest(37.7519, 128.8761, 50_000, "bike");
+        SlotDrawRequest request = new SlotDrawRequest(37.7519, 128.8761, 50_000, "bike", null, null);
 
         assertThatThrownBy(() -> slotService.getOrCreateActiveSession(user.getId(), request))
                 .isInstanceOf(CustomException.class)
