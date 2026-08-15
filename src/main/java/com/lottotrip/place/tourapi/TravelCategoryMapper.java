@@ -31,17 +31,22 @@ public class TravelCategoryMapper {
 
     private static final String TYPE_TOURIST_SPOT = "12";
     private static final String TYPE_CULTURAL_FACILITY = "14";
+    private static final String TYPE_FESTIVAL = "15";
+    private static final String TYPE_COURSE = "25";
     private static final String TYPE_LEISURE = "28";
+    private static final String TYPE_LODGING = "32";
     private static final String TYPE_SHOPPING = "38";
     private static final String TYPE_RESTAURANT = "39";
 
     /**
-     * 적재 대상 관광타입. <b>여행지 3종만 담는다.</b>
+     * 배치 시절의 적재 대상 필터. <b>⛔ 결정 12·13으로 역할이 끝났다.</b>
      *
-     * <p>필터 없이 담으면 모텔·식당이 여행지로 뽑힌다(강릉 20km 100건 표본: 음식점 71 · 숙박 17 ·
-     * 관광지 5 · 쇼핑 4 · 문화시설 3). 숙박(32)은 우리 분류에 대응하는 값조차 없다.
+     * <p>온디맨드에서는 종류 제한을 <b>요청의 {@code contentTypeId}가 API 단계에서</b> 한다.
+     * 우리가 받아서 거를 일이 없다.
      *
-     * <p><b>범위를 넓히려면 이 집합에 추가하기만 하면 된다.</b> 매핑은 음식점·쇼핑까지 이미 지원한다.
+     * <p><b>지금 지우지 않는 이유:</b> 아직 {@code PlaceSeeder}가 쓰고 있다.
+     * 그 클래스를 제거하는 6-14에서 이 상수와 {@link #isTargetContentType}도 함께 지운다.
+     * 먼저 지우면 6-10 단계에서 컴파일이 깨져 "한 단계씩 통과시킨다"는 규칙을 어기게 된다.
      */
     private static final Set<String> TARGET_CONTENT_TYPES =
             Set.of(TYPE_TOURIST_SPOT, TYPE_CULTURAL_FACILITY, TYPE_LEISURE);
@@ -58,10 +63,14 @@ public class TravelCategoryMapper {
      * 아무 규칙에도 걸리지 않았을 때의 값.
      *
      * <p>{@code places.category}는 NOT NULL이고, 여기서 null이나 예외가 나오면 <b>장소 하나 때문에
-     * 배치 전체가 멈춘다.</b> 수천 건을 훑는 작업에서 가장 나쁜 실패 방식이라 반드시 값을 준다.
+     * 저장이 통째로 실패한다.</b> 그래서 반드시 값을 준다.
      *
-     * <p>{@code NATURE}를 고른 이유는 적재 대상의 대부분이 관광지(12)이고 그중 다수가 자연이라,
+     * <p>{@code NATURE}를 고른 이유는 뽑히는 것의 다수가 관광지(12)이고 그중 상당수가 자연이라,
      * 틀렸을 때 가장 덜 어색하기 때문이다.
+     *
+     * <p>⚠️ <b>여기로 떨어지는 것이 늘면 신호다.</b> 결정 13으로 전 종류가 들어오게 되면서
+     * 알려진 관광타입 8종(12·14·15·25·28·32·38·39)은 전부 고유한 분류를 갖는다.
+     * 즉 이 기본값은 <b>TourAPI가 새 종류를 추가했을 때만</b> 쓰여야 한다.
      */
     private static final TravelCategory DEFAULT_CATEGORY = TravelCategory.NATURE;
 
@@ -92,8 +101,17 @@ public class TravelCategoryMapper {
         if (TYPE_CULTURAL_FACILITY.equals(type)) {
             return TravelCategory.CULTURE;
         }
+        if (TYPE_FESTIVAL.equals(type)) {
+            return TravelCategory.FESTIVAL;
+        }
+        if (TYPE_COURSE.equals(type)) {
+            return TravelCategory.COURSE;
+        }
         if (TYPE_LEISURE.equals(type)) {
             return TravelCategory.LEISURE;
+        }
+        if (TYPE_LODGING.equals(type)) {
+            return TravelCategory.LODGING;
         }
         if (TYPE_SHOPPING.equals(type)) {
             return TravelCategory.SHOPPING;

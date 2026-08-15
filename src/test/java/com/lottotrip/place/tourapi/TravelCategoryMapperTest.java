@@ -87,19 +87,50 @@ class TravelCategoryMapperTest {
         assertThat(mapper.map("12", "a01", "a0101", "a01011200")).isEqualTo(TravelCategory.BEACH);
     }
 
-    // ---------- 적재 대상 판단 ----------
+    // ---------- 전 종류 매핑 (roadmap 6-10, 결정 13) ----------
 
     @Test
-    @DisplayName("여행지 3종만 적재 대상이다 — 숙박·음식점·쇼핑은 제외")
-    void acceptsOnlyTravelContentTypes() {
-        // 필터 없이 담으면 모텔이 여행지로 뽑힌다(실측 100건 중 숙박 17 · 음식점 71).
-        assertThat(mapper.isTargetContentType("12")).isTrue();  // 관광지
-        assertThat(mapper.isTargetContentType("14")).isTrue();  // 문화시설
-        assertThat(mapper.isTargetContentType("28")).isTrue();  // 레포츠
+    @DisplayName("숙박은 LODGING이다 — 예전에는 NATURE로 떨어져 모텔이 '자연'으로 저장됐다")
+    void mapsLodging() {
+        // 결정 13으로 전 종류를 담게 되면서 숙박(32)이 실제로 들어온다.
+        // 대응 값이 없으면 기본값 NATURE로 떨어지는데, 그러면 응답에 "에쿠스모텔 · 자연"이 나간다.
+        assertThat(mapper.map("32", "B02", "B0201", "B02010900")).isEqualTo(TravelCategory.LODGING);
+    }
 
-        assertThat(mapper.isTargetContentType("32")).isFalse(); // 숙박
-        assertThat(mapper.isTargetContentType("39")).isFalse(); // 음식점
-        assertThat(mapper.isTargetContentType("38")).isFalse(); // 쇼핑
-        assertThat(mapper.isTargetContentType(null)).isFalse();
+    @Test
+    @DisplayName("축제·공연·행사는 FESTIVAL이다")
+    void mapsFestival() {
+        assertThat(mapper.map("15", "A02", "A0207", "A02070100")).isEqualTo(TravelCategory.FESTIVAL);
+    }
+
+    @Test
+    @DisplayName("여행코스는 COURSE다")
+    void mapsCourse() {
+        assertThat(mapper.map("25", "C01", "C0112", "C01120001")).isEqualTo(TravelCategory.COURSE);
+    }
+
+    @Test
+    @DisplayName("강원에 실제로 있는 8개 관광타입이 전부 고유한 분류로 간다 — 기본값으로 뭉치지 않는다")
+    void mapsEveryContentTypeDistinctly() {
+        // 실측(2026-08-15, areaCode=32)에 존재하는 종류 전부다.
+        // 하나라도 기본값으로 떨어지면 그 종류는 응답에서 정체를 알 수 없게 된다.
+        assertThat(mapper.map("12", "A01", null, null)).isEqualTo(TravelCategory.NATURE);
+        assertThat(mapper.map("14", null, null, null)).isEqualTo(TravelCategory.CULTURE);
+        assertThat(mapper.map("15", null, null, null)).isEqualTo(TravelCategory.FESTIVAL);
+        assertThat(mapper.map("25", null, null, null)).isEqualTo(TravelCategory.COURSE);
+        assertThat(mapper.map("28", null, null, null)).isEqualTo(TravelCategory.LEISURE);
+        assertThat(mapper.map("32", null, null, null)).isEqualTo(TravelCategory.LODGING);
+        assertThat(mapper.map("38", null, null, null)).isEqualTo(TravelCategory.SHOPPING);
+        assertThat(mapper.map("39", null, null, null)).isEqualTo(TravelCategory.FOOD);
+    }
+
+    @Test
+    @DisplayName("모든 분류에 사람이 읽을 이름이 있다 — 응답의 category로 그대로 나간다")
+    void everyCategoryHasDisplayName() {
+        for (TravelCategory category : TravelCategory.values()) {
+            assertThat(category.getDisplayName())
+                    .as("%s의 displayName", category)
+                    .isNotBlank();
+        }
     }
 }
