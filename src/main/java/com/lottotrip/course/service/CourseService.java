@@ -3,11 +3,15 @@ package com.lottotrip.course.service;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.course.dto.CourseItemAddRequest;
+import com.lottotrip.course.dto.CourseItemRemoveResponse;
+import com.lottotrip.course.dto.CourseItemsResponse;
 import com.lottotrip.course.dto.CourseItemResponse;
 import com.lottotrip.course.entity.CourseItem;
 import com.lottotrip.course.entity.TravelCourse;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
+import com.lottotrip.mission.entity.Mission;
+import com.lottotrip.mission.repository.MissionRepository;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.repository.SavedSlotRepository;
@@ -18,6 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
 
 /**
  * 여행 코스. (roadmap 7단계, tour_api_erd.md 4-4)
@@ -52,6 +58,7 @@ public class CourseService {
     private final CourseItemRepository courseItemRepository;
     private final SavedSlotRepository savedSlotRepository;
     private final UserRepository userRepository;
+    private final MissionRepository missionRepository;
 
     /**
      * 뽑은 슬롯을 코스에 담는다.
@@ -84,6 +91,62 @@ public class CourseService {
             log.debug("코스 항목 동시 저장 충돌: courseId={}, placeId={}", course.getId(), place.getId());
             throw new CustomException(ErrorCode.ALREADY_ADDED);
         }
+    }
+
+    /**
+     * 코스에 담긴 것을 담은 순서대로 돌려준다. (roadmap 7-3)
+     *
+     * <p><b>한 번도 담지 않았으면 빈 목록이다.</b> 오류가 아니다 — 아직 아무것도 안 담은 상태는
+     * 정상이고, 프론트는 빈 목록을 그대로 그리면 된다.
+     *
+     * <p><b>조회만으로 코스를 만들지 않는다.</b> 만들면 화면을 열어 보기만 한 회원에게도
+     * 빈 코스가 쌓인다. 코스는 처음 담을 때 생긴다.
+     *
+     * <p>⚠️ <b>어떤 미션을 보여 줄지가 애매하다.</b> {@code course_items}는 장소만 가리키고
+     * 슬롯·미션을 가리키지 않아서, <b>draw 때 제시했던 그 미션을 알 방법이 없다.</b>
+     * 지금은 그 장소의 <b>가장 먼저 등록된 미션</b>을 돌려준다(잠정).
+     * 6-7이 겪었던 것과 같은 문제이고, 그쪽은 {@code saved_slots.mission_id}로 해결했다(결정 14).
+     */
+    @Transactional(readOnly = true)
+    public CourseItemsResponse getItems(Long userId) {
+        return travelCourseRepository.findByUserId(userId).stream()
+                .findFirst()
+                .map(course -> toResponse(courseItemRepository.findByCourseIdOrderBySequenceAsc(course.getId())))
+                .orElseGet(() -> new CourseItemsResponse(List.of()));
+    }
+
+    private CourseItemsResponse toResponse(List<CourseItem> items) {
+        return new CourseItemsResponse(items.stream()
+                .map(item -> CourseItemsResponse.Item.of(item, missionOf(item.getPlace())))
+                .toList());
+    }
+
+    /** 이 장소에 붙은 미션. 없으면 null — 미션이 없다고 담은 장소가 목록에서 빠지면 안 된다. */
+    private Mission missionOf(Place place) {
+        return missionRepository.findFirstByPlaceIdOrderByIdAsc(place.getId()).orElse(null);
+    }
+
+    /**
+     * 코스에서 항목을 뺀다. (roadmap 7-4)
+     *
+     * <p><b>남은 항목의 순번을 다시 매기지 않는다.</b> 3개 중 2번을 지우면 1·3이 남는데,
+     * 순서를 재현하는 데는 이걸로 충분하고 다시 매기면 <b>남은 항목을 전부 UPDATE</b>해야 한다.
+     * 새 항목은 마지막 순번 + 1로 붙으므로 번호가 겹칠 일도 없다.
+     *
+     * @throws CustomException 항목이 없거나 남의 것이면 {@link ErrorCode#ITEM_NOT_FOUND}
+     */
+    @Transactional
+    public CourseItemRemoveResponse removeItem(Long userId, Long itemId) {
+        CourseItem item = courseItemRepository.findById(itemId)
+                .filter(found -> found.getCourse().getUser().getId().equals(userId))
+                .orElseThrow(() -> {
+                    // 남의 항목도 "없음"으로 답한다. 담기(7-1)·슬롯 조회(6-7)와 같은 원칙이다.
+                    log.debug("지울 수 없는 코스 항목: itemId={}, userId={}", itemId, userId);
+                    return new CustomException(ErrorCode.ITEM_NOT_FOUND);
+                });
+
+        courseItemRepository.delete(item);
+        return CourseItemRemoveResponse.of(itemId);
     }
 
     /**

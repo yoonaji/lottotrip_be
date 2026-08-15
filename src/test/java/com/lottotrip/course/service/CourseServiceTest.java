@@ -4,10 +4,14 @@ import com.lottotrip.common.enums.BudgetLevel;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.course.dto.CourseItemAddRequest;
+import com.lottotrip.course.dto.CourseItemRemoveResponse;
+import com.lottotrip.course.dto.CourseItemsResponse;
 import com.lottotrip.course.dto.CourseItemResponse;
 import com.lottotrip.course.entity.CourseItem;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
+import com.lottotrip.mission.entity.Mission;
+import com.lottotrip.mission.repository.MissionRepository;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.TravelCategory;
 import com.lottotrip.place.repository.PlaceRepository;
@@ -58,6 +62,8 @@ class CourseServiceTest extends PostgresContainerSupport {
     private PlaceRepository placeRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private MissionRepository missionRepository;
 
     private CourseService courseService;
     private User user;
@@ -67,8 +73,8 @@ class CourseServiceTest extends PostgresContainerSupport {
     @BeforeEach
     void setUp() {
         sequence = 0;
-        courseService = new CourseService(
-                travelCourseRepository, courseItemRepository, savedSlotRepository, userRepository);
+        courseService = new CourseService(travelCourseRepository, courseItemRepository,
+                savedSlotRepository, userRepository, missionRepository);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
         session = tripSessionRepository.save(TripSession.create(
@@ -250,6 +256,172 @@ class CourseServiceTest extends PostgresContainerSupport {
 
         assertThat(readded.itemId()).isNotNull();
         assertThat(courseItemRepository.findAll()).hasSize(1);
+    }
+
+    // ---------- 코스 조회 (7-3) ----------
+
+    @Test
+    @DisplayName("담은 순서대로 돌려준다")
+    void listsItemsInAddedOrder() {
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("A")).getId()));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("B")).getId()));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("C")).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items())
+                .extracting(item -> item.place().name())
+                .containsExactly("A", "B", "C");
+    }
+
+    @Test
+    @DisplayName("한 번도 담지 않았으면 빈 목록이다 — 코스가 없는 것이 오류는 아니다")
+    void returnsEmptyWhenNothingAdded() {
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items()).isEmpty();
+        // 조회만으로 코스를 만들지는 않는다. 담을 때 만든다.
+        assertThat(travelCourseRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("남의 코스는 보이지 않는다")
+    void hidesOtherUsersItems() {
+        User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
+        courseService.addItem(other.getId(), new CourseItemAddRequest(slotOf(other, placeNamed("남의 장소")).getId()));
+
+        assertThat(courseService.getItems(user.getId()).items()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("장소의 미션을 함께 준다")
+    void includesMission() {
+        Place place = placeNamed("사천진해변");
+        Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).mission().missionId()).isEqualTo(mission.getId());
+    }
+
+    @Test
+    @DisplayName("완료 여부는 아직 항상 false다 — 8단계에서 채운다")
+    void reportsMissionAsNotCompletedYet() {
+        // user_missions를 채우는 것은 8-2다. 지금은 완료를 기록할 방법 자체가 없으므로
+        // 응답 모양만 명세대로 맞춰 두고 값은 false로 고정한다.
+        Place place = placeNamed("사천진해변");
+        missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().completed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("미션이 없는 장소여도 목록에는 나온다")
+    void listsItemWithoutMission() {
+        // 미션은 곁들이는 정보다. 없다고 담은 장소가 목록에서 사라지면 안 된다.
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("미션 없는 곳")).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).mission()).isNull();
+    }
+
+    // ---------- 코스 항목 삭제 (7-4) ----------
+
+    @Test
+    @DisplayName("담은 항목을 지운다")
+    void removesItem() {
+        CourseItemResponse added = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("사천진해변")).getId()));
+
+        CourseItemRemoveResponse response = courseService.removeItem(user.getId(), added.itemId());
+
+        assertThat(response.itemId()).isEqualTo(added.itemId());
+        assertThat(response.deleted()).isTrue();
+        assertThat(courseItemRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("없는 항목이면 ITEM_NOT_FOUND")
+    void failsWhenItemMissing() {
+        assertThatThrownBy(() -> courseService.removeItem(user.getId(), 999_999L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ITEM_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("남의 항목도 ITEM_NOT_FOUND — 남의 코스를 지울 수 없다")
+    void failsWhenItemBelongsToOther() {
+        User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
+        CourseItemResponse othersItem = courseService.addItem(
+                other.getId(), new CourseItemAddRequest(slotOf(other, placeNamed("남의 장소")).getId()));
+
+        assertThatThrownBy(() -> courseService.removeItem(user.getId(), othersItem.itemId()))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ITEM_NOT_FOUND);
+        assertThat(courseItemRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("지워도 남은 항목의 순번은 그대로다")
+    void keepsSequenceAfterRemoval() {
+        // 순번을 다시 매기면 "3개 중 2번을 지웠다"는 사실이 사라진다.
+        // 남은 것의 순번이 1, 3이어도 순서는 그대로 재현된다.
+        CourseItemResponse a = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("A")).getId()));
+        CourseItemResponse b = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("B")).getId()));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("C")).getId()));
+
+        courseService.removeItem(user.getId(), b.itemId());
+
+        Long courseId = travelCourseRepository.findAll().get(0).getId();
+        assertThat(courseItemRepository.findByCourseIdOrderBySequenceAsc(courseId))
+                .extracting(item -> item.getPlace().getName(), CourseItem::getSequence)
+                .containsExactly(tuple("A", 1), tuple("C", 3));
+        assertThat(a.itemId()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("가운데를 지운 뒤 새로 담아도 순번이 겹치지 않는다")
+    void neverReusesSequenceOfSurvivingItem() {
+        // 이것이 순번을 "개수 + 1"이 아니라 "마지막 순번 + 1"로 채우는 이유다.
+        // 1·2·3에서 2를 지우면 개수는 2가 되는데, 개수로 채번하면 새 항목이 3번이 되어
+        // 살아 있는 C(3번)와 겹친다.
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("A")).getId()));
+        CourseItemResponse b = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("B")).getId()));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("C")).getId()));
+        courseService.removeItem(user.getId(), b.itemId());
+
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("D")).getId()));
+
+        Long courseId = travelCourseRepository.findAll().get(0).getId();
+        assertThat(courseItemRepository.findByCourseIdOrderBySequenceAsc(courseId))
+                .extracting(item -> item.getPlace().getName(), CourseItem::getSequence)
+                .containsExactly(tuple("A", 1), tuple("C", 3), tuple("D", 4));
+    }
+
+    @Test
+    @DisplayName("마지막을 지우면 그 순번은 다시 쓰인다 — 겹치지 않으므로 문제없다")
+    void reusesSequenceOfRemovedTail() {
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("A")).getId()));
+        CourseItemResponse b = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("B")).getId()));
+        courseService.removeItem(user.getId(), b.itemId());
+
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("C")).getId()));
+
+        Long courseId = travelCourseRepository.findAll().get(0).getId();
+        assertThat(courseItemRepository.findByCourseIdOrderBySequenceAsc(courseId))
+                .extracting(item -> item.getPlace().getName(), CourseItem::getSequence)
+                .containsExactly(tuple("A", 1), tuple("C", 2));
     }
 
     @Test
