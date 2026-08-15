@@ -11,7 +11,6 @@ import com.lottotrip.course.entity.TravelCourse;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
 import com.lottotrip.mission.entity.Mission;
-import com.lottotrip.mission.repository.MissionRepository;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.repository.SavedSlotRepository;
@@ -58,7 +57,6 @@ public class CourseService {
     private final CourseItemRepository courseItemRepository;
     private final SavedSlotRepository savedSlotRepository;
     private final UserRepository userRepository;
-    private final MissionRepository missionRepository;
 
     /**
      * 뽑은 슬롯을 코스에 담는다.
@@ -83,7 +81,7 @@ public class CourseService {
 
         try {
             CourseItem item = courseItemRepository.saveAndFlush(
-                    CourseItem.create(course, place, nextSequence(course)));
+                    CourseItem.create(course, slot, nextSequence(course)));
             return CourseItemResponse.from(item);
         } catch (DataIntegrityViolationException e) {
             // 위 검사를 통과한 두 요청이 동시에 저장까지 온 경우다. UNIQUE 제약이 한쪽을 막아 준다.
@@ -102,10 +100,10 @@ public class CourseService {
      * <p><b>조회만으로 코스를 만들지 않는다.</b> 만들면 화면을 열어 보기만 한 회원에게도
      * 빈 코스가 쌓인다. 코스는 처음 담을 때 생긴다.
      *
-     * <p>⚠️ <b>어떤 미션을 보여 줄지가 애매하다.</b> {@code course_items}는 장소만 가리키고
-     * 슬롯·미션을 가리키지 않아서, <b>draw 때 제시했던 그 미션을 알 방법이 없다.</b>
-     * 지금은 그 장소의 <b>가장 먼저 등록된 미션</b>을 돌려준다(잠정).
-     * 6-7이 겪었던 것과 같은 문제이고, 그쪽은 {@code saved_slots.mission_id}로 해결했다(결정 14).
+     * <p>✅ <b>미션은 draw 때 제시한 바로 그것이다.</b> {@code course_items.slot_id}를 거쳐
+     * {@code saved_slots.mission_id}에 닿는다(roadmap 7-6). 예전에는 장소만 가리켜서
+     * 그 장소의 미션 중 아무거나 하나를 돌려줬고, 장소에 미션이 3개까지 붙으므로
+     * <b>사용자가 본 적 없는 미션이 코스에 뜰 수 있었다.</b>
      */
     @Transactional(readOnly = true)
     public CourseItemsResponse getItems(Long userId) {
@@ -117,13 +115,20 @@ public class CourseService {
 
     private CourseItemsResponse toResponse(List<CourseItem> items) {
         return new CourseItemsResponse(items.stream()
-                .map(item -> CourseItemsResponse.Item.of(item, missionOf(item.getPlace())))
+                .map(item -> CourseItemsResponse.Item.of(item, missionOf(item)))
                 .toList());
     }
 
-    /** 이 장소에 붙은 미션. 없으면 null — 미션이 없다고 담은 장소가 목록에서 빠지면 안 된다. */
-    private Mission missionOf(Place place) {
-        return missionRepository.findFirstByPlaceIdOrderByIdAsc(place.getId()).orElse(null);
+    /**
+     * 이 항목을 담을 때 제시했던 미션. 없으면 null이다.
+     *
+     * <p><b>장소의 다른 미션으로 폴백하지 않는다.</b> 슬롯의 미션이 비었다는 것은 draw 때
+     * {@code MissionMatcher}가 하나도 확보하지 못했다는 뜻인데, 여기서 장소의 아무 미션이나
+     * 끼워 넣으면 <b>사용자가 본 적 없는 미션</b>이 코스에 나타난다.
+     * 미션은 곁들이는 정보라 비어 있어도 항목은 그대로 나간다.
+     */
+    private Mission missionOf(CourseItem item) {
+        return item.getSlot().getMission();
     }
 
     /**

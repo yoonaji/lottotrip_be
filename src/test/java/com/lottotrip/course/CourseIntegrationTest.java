@@ -99,11 +99,16 @@ class CourseIntegrationTest extends PostgresContainerSupport {
                 .build());
     }
 
-    /** 이 회원이 뽑아 둔 슬롯. 코스에 담을 수 있는 상태다. */
+    /** 이 회원이 뽑아 둔 슬롯. 미션 없이 뽑힌 경우다. */
     private SavedSlot slotOf(User owner, Place place) {
+        return slotOf(owner, place, null);
+    }
+
+    /** {@code presented}가 draw 때 제시한 미션이다. 코스 조회는 이 미션을 그대로 보여 준다(7-6). */
+    private SavedSlot slotOf(User owner, Place place, Mission presented) {
         TripSession session = tripSessionRepository.save(TripSession.create(
                 owner, BudgetLevel.MEDIUM, TransportType.WALK, 37.7519, 128.8761));
-        return savedSlotRepository.save(SavedSlot.create(session, place, null));
+        return savedSlotRepository.save(SavedSlot.create(session, place, presented));
     }
 
     private String addBody(Long slotId) {
@@ -206,9 +211,9 @@ class CourseIntegrationTest extends PostgresContainerSupport {
     @DisplayName("담은 순서대로 조회된다 — 미션 완료 여부는 아직 항상 false다")
     void listsItemsInOrder() throws Exception {
         Place first = placeNamed("사천진해변");
-        missionRepository.save(Mission.create(first, "해변 도착 인증하기", "설명", null, 100));
+        Mission presented = missionRepository.save(Mission.create(first, "해변 도착 인증하기", "설명", null, 100));
         mockMvc.perform(post(ITEMS_PATH).header("Authorization", token)
-                .contentType(MediaType.APPLICATION_JSON).content(addBody(slotOf(user, first).getId())));
+                .contentType(MediaType.APPLICATION_JSON).content(addBody(slotOf(user, first, presented).getId())));
         mockMvc.perform(post(ITEMS_PATH).header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(addBody(slotOf(user, placeNamed("순포습지")).getId())));
 
@@ -218,9 +223,11 @@ class CourseIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.data.items.length()").value(2))
                 .andExpect(jsonPath("$.data.items[0].place.name").value("사천진해변"))
                 .andExpect(jsonPath("$.data.items[1].place.name").value("순포습지"))
+                // draw 때 제시한 그 미션이 그대로 나온다 (7-6 — course_items.slot_id)
+                .andExpect(jsonPath("$.data.items[0].mission.missionId").value(presented.getId()))
                 // ⚠️ user_missions를 채우는 것이 8-2다. 판정 방식은 8단계에서 정한다.
                 .andExpect(jsonPath("$.data.items[0].mission.completed").value(false))
-                // 미션이 없는 장소는 mission이 null이다 — 그래도 목록에는 나온다
+                // 슬롯이 미션 없이 뽑혔으면 mission이 null이다 — 그래도 목록에는 나온다
                 .andExpect(jsonPath("$.data.items[1].mission").isEmpty());
     }
 

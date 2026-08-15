@@ -7,6 +7,9 @@ import com.lottotrip.place.entity.City;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.State;
 import com.lottotrip.place.entity.TravelCategory;
+import com.lottotrip.slot.entity.SavedSlot;
+import com.lottotrip.slot.entity.TransportType;
+import com.lottotrip.slot.entity.TripSession;
 import com.lottotrip.support.PostgresContainerSupport;
 import com.lottotrip.user.entity.User;
 import org.junit.jupiter.api.DisplayName;
@@ -72,6 +75,16 @@ class CourseRepositoryTest extends PostgresContainerSupport {
         return course;
     }
 
+    /** 이 장소를 뽑은 슬롯. 코스 항목은 반드시 슬롯을 거쳐 만들어진다. */
+    private SavedSlot persistedSlot(Place place) {
+        TripSession session = TripSession.create(
+                persistedUser(), BudgetLevel.MEDIUM, TransportType.WALK, 37.7519, 128.8761);
+        entityManager.persist(session);
+        SavedSlot slot = SavedSlot.create(session, place, null);
+        entityManager.persist(slot);
+        return slot;
+    }
+
     @Test
     @DisplayName("회원의 코스를 찾는다")
     void findsCourseByUser() {
@@ -92,7 +105,7 @@ class CourseRepositoryTest extends PostgresContainerSupport {
         TravelCourse course = persistedCourse(persistedUser());
         Place added = persistedPlace("사천진해변");
         Place notAdded = persistedPlace("주문진항");
-        entityManager.persist(CourseItem.create(course, added, 1));
+        entityManager.persist(CourseItem.create(course, persistedSlot(added), 1));
         entityManager.flush();
 
         assertThat(courseItemRepository.existsByCourseIdAndPlaceId(course.getId(), added.getId())).isTrue();
@@ -114,8 +127,8 @@ class CourseRepositoryTest extends PostgresContainerSupport {
     void findsMaxSequence() {
         // 명세: sequence는 해당 코스의 마지막 순번 + 1로 채운다. (tour_api_erd.md 1)
         TravelCourse course = persistedCourse(persistedUser());
-        entityManager.persist(CourseItem.create(course, persistedPlace("사천진해변"), 1));
-        entityManager.persist(CourseItem.create(course, persistedPlace("주문진항"), 2));
+        entityManager.persist(CourseItem.create(course, persistedSlot(persistedPlace("사천진해변")), 1));
+        entityManager.persist(CourseItem.create(course, persistedSlot(persistedPlace("주문진항")), 2));
         entityManager.flush();
 
         assertThat(courseItemRepository.findMaxSequence(course.getId())).isEqualTo(2);
@@ -127,7 +140,7 @@ class CourseRepositoryTest extends PostgresContainerSupport {
         User user = persistedUser();
         TravelCourse mine = persistedCourse(user);
         TravelCourse other = persistedCourse(persistedUser());
-        entityManager.persist(CourseItem.create(other, persistedPlace("주문진항"), 5));
+        entityManager.persist(CourseItem.create(other, persistedSlot(persistedPlace("주문진항")), 5));
         entityManager.flush();
 
         // 남의 코스 순번이 내 코스에 영향을 주면 안 된다.
@@ -139,8 +152,8 @@ class CourseRepositoryTest extends PostgresContainerSupport {
     void findsItemsInSequenceOrder() {
         // GET /course/items 응답 목록에 쓴다. 담은 순서대로 보여야 한다.
         TravelCourse course = persistedCourse(persistedUser());
-        entityManager.persist(CourseItem.create(course, persistedPlace("주문진항"), 2));
-        entityManager.persist(CourseItem.create(course, persistedPlace("사천진해변"), 1));
+        entityManager.persist(CourseItem.create(course, persistedSlot(persistedPlace("주문진항")), 2));
+        entityManager.persist(CourseItem.create(course, persistedSlot(persistedPlace("사천진해변")), 1));
         entityManager.flush();
         entityManager.clear();
 

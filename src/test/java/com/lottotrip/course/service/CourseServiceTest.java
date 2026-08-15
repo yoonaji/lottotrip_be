@@ -74,7 +74,7 @@ class CourseServiceTest extends PostgresContainerSupport {
     void setUp() {
         sequence = 0;
         courseService = new CourseService(travelCourseRepository, courseItemRepository,
-                savedSlotRepository, userRepository, missionRepository);
+                savedSlotRepository, userRepository);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
         session = tripSessionRepository.save(TripSession.create(
@@ -92,12 +92,22 @@ class CourseServiceTest extends PostgresContainerSupport {
                 .build());
     }
 
-    /** 이 회원이 뽑은 슬롯 하나. 코스에 담을 수 있는 상태다. */
+    /** 이 회원이 뽑은 슬롯 하나. 미션 없이 뽑힌 경우다. */
     private SavedSlot slotOf(User owner, Place place) {
+        return slotOf(owner, place, null);
+    }
+
+    /**
+     * 이 회원이 뽑은 슬롯 하나. {@code presented}가 draw 때 제시한 미션이다.
+     *
+     * <p>미션을 슬롯에 실어 두는 이유는 6-13(결정 14)과 같다 — 장소에는 미션이 여러 개라
+     * 나중에 "그중 어느 것을 보여 줬는지"를 장소만으로는 복원할 수 없다.
+     */
+    private SavedSlot slotOf(User owner, Place place, Mission presented) {
         TripSession ownerSession = owner.getId().equals(user.getId()) ? session
                 : tripSessionRepository.save(TripSession.create(
                         owner, BudgetLevel.MEDIUM, TransportType.WALK, 37.7519, 128.8761));
-        return savedSlotRepository.save(SavedSlot.create(ownerSession, place, null));
+        return savedSlotRepository.save(SavedSlot.create(ownerSession, place, presented));
     }
 
     // ---------- 담기 (7-1) ----------
@@ -294,11 +304,11 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("장소의 미션을 함께 준다")
+    @DisplayName("슬롯이 제시한 미션을 함께 준다")
     void includesMission() {
         Place place = placeNamed("사천진해변");
         Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
-        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
 
         CourseItemsResponse response = courseService.getItems(user.getId());
 
@@ -307,13 +317,31 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("장소에 미션이 여럿이어도 draw 때 제시한 그 미션을 준다")
+    void includesTheMissionPresentedAtDraw() {
+        // 이것이 course_items.slot_id를 붙인 이유다. 장소는 미션을 3개까지 갖는데
+        // (MissionMatcher.REQUIRED_MISSION_COUNT), 코스가 장소만 가리키면 그중 무엇을
+        // 보여 줬는지 알 수 없어 엉뚱한 미션이 나간다. 6-7이 겪은 것과 같은 문제다.
+        Place place = placeNamed("사천진해변");
+        missionRepository.save(Mission.create(place, "미션 A", "설명", null, 100));
+        Mission presented = missionRepository.save(Mission.create(place, "미션 B", "설명", null, 100));
+        missionRepository.save(Mission.create(place, "미션 C", "설명", null, 100));
+
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, presented).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().missionId()).isEqualTo(presented.getId());
+    }
+
+    @Test
     @DisplayName("완료 여부는 아직 항상 false다 — 8단계에서 채운다")
     void reportsMissionAsNotCompletedYet() {
         // user_missions를 채우는 것은 8-2다. 지금은 완료를 기록할 방법 자체가 없으므로
         // 응답 모양만 명세대로 맞춰 두고 값은 false로 고정한다.
         Place place = placeNamed("사천진해변");
-        missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
-        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+        Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
 
         CourseItemsResponse response = courseService.getItems(user.getId());
 
@@ -321,7 +349,7 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("미션이 없는 장소여도 목록에는 나온다")
+    @DisplayName("슬롯이 미션 없이 뽑혔으면 목록에는 나오되 미션은 비어 있다")
     void listsItemWithoutMission() {
         // 미션은 곁들이는 정보다. 없다고 담은 장소가 목록에서 사라지면 안 된다.
         courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, placeNamed("미션 없는 곳")).getId()));
@@ -330,6 +358,35 @@ class CourseServiceTest extends PostgresContainerSupport {
 
         assertThat(response.items()).hasSize(1);
         assertThat(response.items().get(0).mission()).isNull();
+    }
+
+    @Test
+    @DisplayName("장소에 미션이 있어도 슬롯이 제시하지 않았으면 비워 둔다")
+    void doesNotFallBackToPlaceMissions() {
+        // 폴백하지 않는다. 슬롯의 미션이 비었다는 것은 draw 때 MissionMatcher가 하나도
+        // 확보하지 못했다는 뜻이고, 여기서 장소의 아무 미션이나 끼워 넣으면
+        // "사용자가 본 적 없는 미션"이 코스에 나타난다.
+        Place place = placeNamed("사천진해변");
+        missionRepository.save(Mission.create(place, "나중에 생긴 미션", "설명", null, 100));
+
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        assertThat(courseService.getItems(user.getId()).items().get(0).mission()).isNull();
+    }
+
+    @Test
+    @DisplayName("담은 항목에서 슬롯을 거쳐 뽑을 당시의 정보에 닿는다")
+    void itemKeepsLinkToSlot() {
+        // slot_id 하나로 미션뿐 아니라 세션(이동수단·예산·뽑은 시각)까지 따라갈 수 있다.
+        Place place = placeNamed("사천진해변");
+        SavedSlot slot = slotOf(user, place);
+        CourseItemResponse added = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slot.getId()));
+
+        CourseItem item = courseItemRepository.findById(added.itemId()).orElseThrow();
+
+        assertThat(item.getSlot().getId()).isEqualTo(slot.getId());
+        assertThat(item.getSlot().getSession().getTransportation()).isEqualTo(TransportType.WALK);
     }
 
     // ---------- 코스 항목 삭제 (7-4) ----------

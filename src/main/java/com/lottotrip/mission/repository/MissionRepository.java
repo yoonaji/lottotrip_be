@@ -4,7 +4,6 @@ import com.lottotrip.mission.entity.Mission;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
-import java.util.Optional;
 
 /** 미션 마스터 저장소. */
 public interface MissionRepository extends JpaRepository<Mission, Long> {
@@ -16,12 +15,7 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
      */
     List<Mission> findByPlaceId(Long placeId);
 
-    /**
-     * 이 장소에 가장 먼저 등록된 미션. (6-7 결과 조회)
-     *
-     * <p>⚠️ <b>draw 때 제시한 미션과 같다는 보장은 없다.</b> {@code saved_slots}에 어떤 미션을
-     * 보여 줬는지 남기지 않기 때문이다(미확정 — 스키마 변경이 필요하다).
-     * 정렬을 못 박아 두는 이유는 <b>같은 슬롯을 여러 번 조회할 때 미션이 바뀌지 않게</b> 하기 위함이다.
-     */
-    Optional<Mission> findFirstByPlaceIdOrderByIdAsc(Long placeId);
+    // 여기 있던 findFirstByPlaceIdOrderByIdAsc는 지웠다(7-6).
+    // "그 장소의 첫 미션"으로 draw 때 제시한 미션을 대신하던 임시방편이었는데,
+    // 슬롯 조회(6-13)와 코스 조회(7-6) 둘 다 saved_slots.mission_id를 쓰게 되면서 부를 곳이 없어졌다.
 }

@@ -15,7 +15,7 @@ import java.util.List;
 public record CourseItemsResponse(List<Item> items) {
 
     /**
-     * @param mission 이 장소의 미션. 없으면 null — 미션은 곁들이는 정보라
+     * @param mission draw 때 이 슬롯에서 제시한 미션. 없으면 null — 미션은 곁들이는 정보라
      *                없다고 담은 장소가 목록에서 빠지면 안 된다
      */
     public record Item(Long itemId, PlaceInfo place, MissionInfo mission) {
