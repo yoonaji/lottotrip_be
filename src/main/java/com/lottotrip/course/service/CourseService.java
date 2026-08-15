@@ -8,12 +8,14 @@ import com.lottotrip.course.entity.CourseItem;
 import com.lottotrip.course.entity.TravelCourse;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
+import com.lottotrip.place.entity.Place;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.repository.SavedSlotRepository;
 import com.lottotrip.user.entity.User;
 import com.lottotrip.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,17 +63,44 @@ public class CourseService {
      * <p><b>장소는 요청이 아니라 슬롯에서 가져온다.</b> 프론트가 {@code placeId}를 보내게 하면
      * 뽑지도 않은 장소를 담을 수 있다. 슬롯을 거치면 "내가 실제로 뽑은 것"만 담긴다.
      *
-     * @throws CustomException 슬롯이 없거나 남의 것이면 {@link ErrorCode#RESULT_NOT_FOUND}
+     * @throws CustomException 슬롯이 없거나 남의 것이면 {@link ErrorCode#RESULT_NOT_FOUND},
+     *                         이미 담긴 장소면 {@link ErrorCode#ALREADY_ADDED}
      */
     @Transactional
     public CourseItemResponse addItem(Long userId, CourseItemAddRequest request) {
         SavedSlot slot = findOwnedSlot(userId, request.slotId());
         TravelCourse course = getOrCreateCourse(userId);
+        Place place = slot.getPlace();
 
-        CourseItem item = courseItemRepository.save(
-                CourseItem.create(course, slot.getPlace(), nextSequence(course)));
+        requireNotAlreadyAdded(course, place);
 
-        return CourseItemResponse.from(item);
+        try {
+            CourseItem item = courseItemRepository.saveAndFlush(
+                    CourseItem.create(course, place, nextSequence(course)));
+            return CourseItemResponse.from(item);
+        } catch (DataIntegrityViolationException e) {
+            // 위 검사를 통과한 두 요청이 동시에 저장까지 온 경우다. UNIQUE 제약이 한쪽을 막아 준다.
+            // 사용자 입장에서는 "이미 담겨 있다"가 맞는 답이므로 같은 에러로 돌려준다.
+            log.debug("코스 항목 동시 저장 충돌: courseId={}, placeId={}", course.getId(), place.getId());
+            throw new CustomException(ErrorCode.ALREADY_ADDED);
+        }
+    }
+
+    /**
+     * 이미 담긴 장소인지 본다.
+     *
+     * <p><b>중복 판정 기준이 슬롯이 아니라 장소다.</b> 온디맨드 추첨이라 인기 있는 곳은 반복해서 뽑히는데,
+     * 슬롯 번호로 막으면 <b>같은 장소가 코스에 여러 줄로 쌓인다.</b>
+     *
+     * <p><b>이 검사만으로는 부족하다.</b> 같은 요청이 동시에 두 번 들어오면 둘 다 "없음"을 보고
+     * 통과한다. {@code (course_id, place_id)} UNIQUE 제약이 마지막 방어선이고,
+     * 여기서는 <b>흔한 경우를 예외 없이 걸러 주는 역할</b>을 한다.
+     */
+    private void requireNotAlreadyAdded(TravelCourse course, Place place) {
+        if (courseItemRepository.existsByCourseIdAndPlaceId(course.getId(), place.getId())) {
+            log.debug("이미 담긴 장소: courseId={}, placeId={}", course.getId(), place.getId());
+            throw new CustomException(ErrorCode.ALREADY_ADDED);
+        }
     }
 
     /**

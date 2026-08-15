@@ -179,6 +179,79 @@ class CourseServiceTest extends PostgresContainerSupport {
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
     }
 
+    // ---------- 중복 방지 (7-2) ----------
+
+    @Test
+    @DisplayName("같은 장소를 또 담으면 ALREADY_ADDED")
+    void failsWhenPlaceAlreadyAdded() {
+        Place place = placeNamed("사천진해변");
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        SavedSlot again = slotOf(user, place);
+        assertThatThrownBy(() -> courseService.addItem(user.getId(), new CourseItemAddRequest(again.getId())))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_ADDED);
+    }
+
+    @Test
+    @DisplayName("슬롯이 달라도 장소가 같으면 막는다 — 같은 곳을 여러 번 뽑을 수 있다")
+    void blocksSamePlaceFromDifferentSlots() {
+        // 온디맨드 추첨이라 인기 있는 장소는 반복해서 뽑힌다. 슬롯 번호로만 막으면
+        // 같은 장소가 코스에 여러 줄로 쌓인다. 중복 판정 기준은 장소여야 한다.
+        Place place = placeNamed("사천진해변");
+        SavedSlot first = slotOf(user, place);
+        SavedSlot second = slotOf(user, place);
+        assertThat(first.getId()).isNotEqualTo(second.getId());
+
+        courseService.addItem(user.getId(), new CourseItemAddRequest(first.getId()));
+
+        assertThatThrownBy(() -> courseService.addItem(user.getId(), new CourseItemAddRequest(second.getId())))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_ADDED);
+    }
+
+    @Test
+    @DisplayName("중복이면 항목도 순번도 늘지 않는다")
+    void addsNothingWhenDuplicated() {
+        Place place = placeNamed("사천진해변");
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        SavedSlot again = slotOf(user, place);
+        assertThatThrownBy(() -> courseService.addItem(user.getId(), new CourseItemAddRequest(again.getId())))
+                .isInstanceOf(CustomException.class);
+
+        assertThat(courseItemRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("다른 회원은 같은 장소를 담을 수 있다 — 코스가 다르면 남남이다")
+    void allowsSamePlaceForDifferentUsers() {
+        Place place = placeNamed("사천진해변");
+        User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        courseService.addItem(other.getId(), new CourseItemAddRequest(slotOf(other, place).getId()));
+
+        assertThat(courseItemRepository.findAll()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("담았다 지운 장소는 다시 담을 수 있다")
+    void allowsReAddAfterRemoval() {
+        // 지운 뒤에도 막히면 사용자가 되돌릴 방법이 없다.
+        Place place = placeNamed("사천진해변");
+        CourseItemResponse added = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+        courseItemRepository.deleteById(added.itemId());
+        courseItemRepository.flush();
+
+        CourseItemResponse readded = courseService.addItem(
+                user.getId(), new CourseItemAddRequest(slotOf(user, place).getId()));
+
+        assertThat(readded.itemId()).isNotNull();
+        assertThat(courseItemRepository.findAll()).hasSize(1);
+    }
+
     @Test
     @DisplayName("담기에 실패하면 코스도 만들지 않는다")
     void createsNothingWhenSlotMissing() {
