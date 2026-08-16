@@ -324,21 +324,24 @@ class FullScenarioIntegrationTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("⚠️ 미션을 완료해도 코스의 completed는 아직 false다")
-    void completedFlagIsStillHardcodedFalse() throws Exception {
-        // 알려진 구멍이다. 7-3·7-6에서 "판정은 8단계에서 정한다"고 미뤄 뒀는데
-        // 로드맵 8-1~8-5 항목에 들어가지 않았다(history.md 8단계 "남은 사항").
-        // 지금 상태를 테스트로 고정해 두면, 고칠 때 이 테스트가 빨간불로 알려 준다.
+    @DisplayName("미션을 완료하면 코스에서 completed=true로 보인다")
+    void completedMissionShowsInCourse() throws Exception {
+        // 도메인을 건너가는 판정이다 — 미션 도메인에 남은 기록을 코스 조회가 읽는다.
+        // 판정 근거는 user_missions에 줄이 있는가뿐이고, 그 줄은 GPS 인증을 통과해야 생긴다(8-1·8-2).
         String token = login();
         givenDrawn("사천진해변");
         MvcResult drawn = draw(token);
         addToCourse(token, read(drawn, "$.data.slotId"));
+
+        // 완료하기 전에는 false다.
+        mockMvc.perform(get(ITEMS_PATH).header("Authorization", token))
+                .andExpect(jsonPath("$.data.items[0].mission.completed").value(false));
+
         completeMission(token, read(drawn, "$.data.mission.missionId"));
 
         mockMvc.perform(get(ITEMS_PATH).header("Authorization", token))
                 .andExpect(status().isOk())
-                // 완료 기록은 user_missions에 남았는데도 false다. 판정 로직을 붙이면 true가 된다.
-                .andExpect(jsonPath("$.data.items[0].mission.completed").value(false));
+                .andExpect(jsonPath("$.data.items[0].mission.completed").value(true));
 
         assertThat(userMissionRepository.findAll()).hasSize(1);
     }

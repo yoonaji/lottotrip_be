@@ -11,7 +11,9 @@ import com.lottotrip.course.entity.CourseItem;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
 import com.lottotrip.mission.entity.Mission;
+import com.lottotrip.mission.entity.UserMission;
 import com.lottotrip.mission.repository.MissionRepository;
+import com.lottotrip.mission.repository.UserMissionRepository;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.TravelCategory;
 import com.lottotrip.place.repository.PlaceRepository;
@@ -64,6 +66,8 @@ class CourseServiceTest extends PostgresContainerSupport {
     private UserRepository userRepository;
     @Autowired
     private MissionRepository missionRepository;
+    @Autowired
+    private UserMissionRepository userMissionRepository;
 
     private CourseService courseService;
     private User user;
@@ -74,7 +78,7 @@ class CourseServiceTest extends PostgresContainerSupport {
     void setUp() {
         sequence = 0;
         courseService = new CourseService(travelCourseRepository, courseItemRepository,
-                savedSlotRepository, userRepository);
+                savedSlotRepository, userRepository, userMissionRepository);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
         session = tripSessionRepository.save(TripSession.create(
@@ -335,10 +339,23 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("완료 여부는 아직 항상 false다 — 8단계에서 채운다")
-    void reportsMissionAsNotCompletedYet() {
-        // user_missions를 채우는 것은 8-2다. 지금은 완료를 기록할 방법 자체가 없으므로
-        // 응답 모양만 명세대로 맞춰 두고 값은 false로 고정한다.
+    @DisplayName("완료한 미션은 completed=true다")
+    void reportsCompletedMission() {
+        // 판정 근거는 user_missions에 줄이 있는가뿐이다. 그 줄은 GPS 인증을 통과했을 때만 생긴다(8-1·8-2).
+        Place place = placeNamed("사천진해변");
+        Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
+
+        userMissionRepository.save(UserMission.complete(user, mission));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().completed()).isTrue();
+    }
+
+    @Test
+    @DisplayName("아직 완료하지 않았으면 false다")
+    void reportsIncompleteMission() {
         Place place = placeNamed("사천진해변");
         Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
         courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
@@ -346,6 +363,43 @@ class CourseServiceTest extends PostgresContainerSupport {
         CourseItemsResponse response = courseService.getItems(user.getId());
 
         assertThat(response.items().get(0).mission().completed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("다른 사람이 완료한 것은 내 코스에 반영되지 않는다")
+    void ignoresAnotherUsersCompletion() {
+        // 미션은 장소에 붙은 공용 자산이라 여러 사람이 각자 완료한다(8-2).
+        // 회원을 구분하지 않으면 남이 다녀온 곳이 내 코스에서 완료로 보인다.
+        Place place = placeNamed("사천진해변");
+        Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
+
+        User other = userRepository.save(User.create("b@test.com", "다른 사람", null));
+        userMissionRepository.save(UserMission.complete(other, mission));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().completed()).isFalse();
+    }
+
+    @Test
+    @DisplayName("항목이 여러 개면 각자의 완료 여부가 매겨진다")
+    void marksEachItemIndependently() {
+        // 완료 여부를 한 번에 조회하므로(N+1 회피), 항목별로 제대로 갈리는지 확인한다.
+        Place done = placeNamed("사천진해변");
+        Mission doneMission = missionRepository.save(Mission.create(done, "해변 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, done, doneMission).getId()));
+
+        Place notYet = placeNamed("순포습지");
+        Mission pending = missionRepository.save(Mission.create(notYet, "습지 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, notYet, pending).getId()));
+
+        userMissionRepository.save(UserMission.complete(user, doneMission));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items()).extracting(item -> item.mission().completed())
+                .containsExactly(true, false);
     }
 
     @Test

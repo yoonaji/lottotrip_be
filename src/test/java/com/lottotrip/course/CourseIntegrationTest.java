@@ -208,7 +208,7 @@ class CourseIntegrationTest extends PostgresContainerSupport {
     // ---------- 조회 ----------
 
     @Test
-    @DisplayName("담은 순서대로 조회된다 — 미션 완료 여부는 아직 항상 false다")
+    @DisplayName("담은 순서대로 조회된다")
     void listsItemsInOrder() throws Exception {
         Place first = placeNamed("사천진해변");
         Mission presented = missionRepository.save(Mission.create(first, "해변 도착 인증하기", "설명", null, 100));
@@ -225,7 +225,8 @@ class CourseIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.data.items[1].place.name").value("순포습지"))
                 // draw 때 제시한 그 미션이 그대로 나온다 (7-6 — course_items.slot_id)
                 .andExpect(jsonPath("$.data.items[0].mission.missionId").value(presented.getId()))
-                // ⚠️ user_missions를 채우는 것이 8-2다. 판정 방식은 8단계에서 정한다.
+                // 아직 완료하지 않았으므로 false다. 완료하면 true가 되는 것은
+                // CourseServiceTest와 FullScenarioIntegrationTest가 확인한다(9-1-1).
                 .andExpect(jsonPath("$.data.items[0].mission.completed").value(false))
                 // 슬롯이 미션 없이 뽑혔으면 mission이 null이다 — 그래도 목록에는 나온다
                 .andExpect(jsonPath("$.data.items[1].mission").isEmpty());

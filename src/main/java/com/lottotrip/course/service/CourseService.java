@@ -11,6 +11,7 @@ import com.lottotrip.course.entity.TravelCourse;
 import com.lottotrip.course.repository.CourseItemRepository;
 import com.lottotrip.course.repository.TravelCourseRepository;
 import com.lottotrip.mission.entity.Mission;
+import com.lottotrip.mission.repository.UserMissionRepository;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.repository.SavedSlotRepository;
@@ -23,6 +24,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 여행 코스. (roadmap 7단계, tour_api_erd.md 4-4)
@@ -57,6 +61,7 @@ public class CourseService {
     private final CourseItemRepository courseItemRepository;
     private final SavedSlotRepository savedSlotRepository;
     private final UserRepository userRepository;
+    private final UserMissionRepository userMissionRepository;
 
     /**
      * 뽑은 슬롯을 코스에 담는다.
@@ -104,19 +109,50 @@ public class CourseService {
      * {@code saved_slots.mission_id}에 닿는다(roadmap 7-6). 예전에는 장소만 가리켜서
      * 그 장소의 미션 중 아무거나 하나를 돌려줬고, 장소에 미션이 3개까지 붙으므로
      * <b>사용자가 본 적 없는 미션이 코스에 뜰 수 있었다.</b>
+     *
+     * <p>✅ <b>완료 여부는 {@code user_missions}를 보고 판정한다</b>(roadmap 9-1-1).
+     * 그 줄은 GPS 인증을 통과했을 때만 생기므로(8-1·8-2), 결국 "그 장소에 실제로 다녀왔는가"다.
+     * 8단계 전에는 기록할 방법 자체가 없어 항상 false로 내보내고 있었다.
      */
     @Transactional(readOnly = true)
     public CourseItemsResponse getItems(Long userId) {
         return travelCourseRepository.findByUserId(userId).stream()
                 .findFirst()
-                .map(course -> toResponse(courseItemRepository.findByCourseIdOrderBySequenceAsc(course.getId())))
+                .map(course -> toResponse(userId, courseItemRepository.findByCourseIdOrderBySequenceAsc(course.getId())))
                 .orElseGet(() -> new CourseItemsResponse(List.of()));
     }
 
-    private CourseItemsResponse toResponse(List<CourseItem> items) {
+    private CourseItemsResponse toResponse(Long userId, List<CourseItem> items) {
+        Set<Long> completed = completedMissionIds(userId, items);
         return new CourseItemsResponse(items.stream()
-                .map(item -> CourseItemsResponse.Item.of(item, missionOf(item)))
+                .map(item -> {
+                    Mission mission = missionOf(item);
+                    return CourseItemsResponse.Item.of(item, mission,
+                            mission != null && completed.contains(mission.getId()));
+                })
                 .toList());
+    }
+
+    /**
+     * 이 회원이 완료한 미션 번호들.
+     *
+     * <p><b>항목마다 묻지 않고 한 번에 묻는다.</b> 항목이 10개면 조회가 10번 나가는데(N+1 문제),
+     * 목록 조회는 자주 열리는 화면이라 그 차이가 그대로 응답 시간이 된다.
+     *
+     * <p>미션이 붙지 않은 항목은 애초에 물어볼 것이 없어 제외한다. 물어볼 것이 하나도 없으면
+     * 조회 자체를 건너뛴다 — {@code IN ()}은 DB에 따라 문법 오류가 된다.
+     */
+    private Set<Long> completedMissionIds(Long userId, List<CourseItem> items) {
+        Set<Long> missionIds = items.stream()
+                .map(this::missionOf)
+                .filter(Objects::nonNull)
+                .map(Mission::getId)
+                .collect(Collectors.toSet());
+
+        if (missionIds.isEmpty()) {
+            return Set.of();
+        }
+        return Set.copyOf(userMissionRepository.findCompletedMissionIds(userId, missionIds));
     }
 
     /**

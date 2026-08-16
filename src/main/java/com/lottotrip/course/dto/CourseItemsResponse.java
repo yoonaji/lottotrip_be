@@ -20,12 +20,12 @@ public record CourseItemsResponse(List<Item> items) {
      */
     public record Item(Long itemId, PlaceInfo place, MissionInfo mission) {
 
-        public static Item of(CourseItem item, Mission mission) {
+        public static Item of(CourseItem item, Mission mission, boolean missionCompleted) {
             Place place = item.getPlace();
             return new Item(
                     item.getId(),
                     new PlaceInfo(place.getId(), place.getName()),
-                    MissionInfo.of(mission));
+                    MissionInfo.of(mission, missionCompleted));
         }
     }
 
@@ -33,16 +33,15 @@ public record CourseItemsResponse(List<Item> items) {
     }
 
     /**
-     * @param completed 미션 완료 여부.
-     *                  ⚠️ <b>지금은 항상 false다</b> — 완료를 기록하는 {@code user_missions}를
-     *                  채우는 것이 8-2라서, 아직 완료를 남길 방법 자체가 없다.
-     *                  <b>판정 방식은 8단계에서 정한다</b>(roadmap 7-3)
+     * @param completed 이 회원이 그 미션을 완료했는가.
+     *                  <b>판정 근거는 {@code user_missions}에 줄이 있는가뿐이다</b>(roadmap 9-1-1).
+     *                  그 줄은 GPS 인증을 통과했을 때만 생기므로(8-1·8-2), 결국 "그 장소에
+     *                  실제로 다녀왔는가"와 같은 말이 된다
      */
     public record MissionInfo(Long missionId, boolean completed) {
 
-        /** 완료 여부를 아직 판정하지 못하므로 false로 채운다. 8-2에서 실제 값이 들어온다. */
-        static MissionInfo of(Mission mission) {
-            return mission == null ? null : new MissionInfo(mission.getId(), false);
+        static MissionInfo of(Mission mission, boolean completed) {
+            return mission == null ? null : new MissionInfo(mission.getId(), completed);
         }
     }
 }
