@@ -52,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "tourapi.service-key=")
+@TestPropertySource(properties = {"tourapi.service-key=", "anthropic.api-key="})
 @Transactional
 class SlotIntegrationTest extends PostgresContainerSupport {
 
