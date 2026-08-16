@@ -20,10 +20,9 @@ public enum ProviderType {
      * 요청 본문의 문자열(`"kakao"`)을 provider로 바꾼다.
      *
      * DB 저장값은 대문자(`KAKAO`)인데 API 명세의 요청은 소문자다. (tour_api_erd.md 4-1)
-     * 대소문자를 무시해 받으면 양쪽을 모두 수용할 수 있다. `TransportType.from()`과 같은 방식이다.
+     * 대소문자를 무시해 받으면 양쪽을 모두 수용한다.
      *
-     * 정의되지 않은 값이면 400으로 거절한다. 여기서 걸러 내지 않으면 "구현체를 찾을 수 없다"는
-     * 다른 이유로 실패해, 잘못 보낸 쪽이 원인을 알기 어렵다.
+     * 정의되지 않은 값이면 400으로 거절한다.
      */
     public static ProviderType from(String value) {
         return Arrays.stream(values())

@@ -32,7 +32,6 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
      * 위에서 걸리지 않은 모든 예외.
      *
      * 원인은 로그에 전부 남기되 응답에는 고정 메시지만 내려보낸다.
-     * 예외 메시지를 그대로 노출하면 내부 구조나 쿼리가 밖으로 새어 나갈 수 있다.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
@@ -42,8 +41,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     /**
-     * Spring MVC가 직접 던지는 표준 예외(본문 파싱 실패, 지원하지 않는 메서드·미디어타입,
-     * `@Valid` 검증 실패 등)의 최종 응답을 만드는 지점.
+     * Spring MVC가 직접 던지는 표준 예외(본문 파싱 실패, 지원하지 않는 메서드·미디어타입,`@Valid` 검증 실패 등)
+     * 를 백엔드 공통 응답으로 교체한다.
      *
      * 부모가 상태 코드는 이미 알맞게 정해주지만 본문은 Spring 기본 형식(`ProblemDetail`)이라
      * 공통 응답 포맷과 어긋난다. 그래서 상태 코드는 그대로 두고 본문만 {@link ApiResponse}로 교체한다.

@@ -4,11 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * 로그인 응답. (tour_api_erd.md 4-1)
- *
- * Entity(`User`)를 그대로 내려보내지 않고 이 DTO를 따로 두는 이유는 두 가지다.
- *   - Entity에는 내보내면 안 되는 값이 섞여 있다. 지금은 없더라도 나중에 컬럼이 하나 추가되면
- *       **아무도 의도하지 않은 채** API 응답에 딸려 나간다.
- *   - DB 컬럼명이 바뀔 때마다 API 응답이 함께 바뀌면 프론트가 그때마다 깨진다.
  */
 public record LoginResponse(
         String accessToken,

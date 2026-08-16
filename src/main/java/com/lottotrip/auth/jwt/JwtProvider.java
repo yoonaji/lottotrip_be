@@ -16,16 +16,9 @@ import java.util.Date;
 /**
  * JWT 발급 · 검증 · 클레임 추출을 담당한다. (roadmap 4-1)
  *
- * ## JWT가 무엇인가
- * "이 요청을 보낸 사람은 3번 회원이다"를 담은 문자열이다. 세 부분이 점으로 이어져 있다.
- * `헤더.내용(클레임).서명`
- * 앞의 두 부분은 그냥 인코딩된 것이라 누구나 읽을 수 있다. **비밀은 담지 않는다.**
- * 마지막 서명은 서버만 아는 비밀키로 만든 값이라, 내용이 한 글자라도 바뀌면 검증에 실패한다.
- * 덕분에 서버는 로그인 상태를 DB나 메모리에 들고 있지 않아도 된다(무상태, stateless).
- *
  * ## 토큰이 두 종류인 이유
- *   - **액세스 토큰** — API를 호출할 때마다 들고 다닌다. 자주 노출되므로 수명을 짧게(1시간) 둔다.
- *   - **리프레시 토큰** — 액세스 토큰이 만료됐을 때 새로 받아오는 용도로만 쓴다.
+ *   - 액세스 토큰 — API를 호출할 때마다 들고 다닌다. 자주 노출되므로 수명을 짧게(1시간) 둔다.
+ *   - 리프레시 토큰 — 액세스 토큰이 만료됐을 때 새로 받아오는 용도로만 쓴다.
  *       수명이 길지만(2주) 쓰이는 횟수가 적어 노출 위험이 낮다.
  * 짧은 수명 하나로만 운영하면 사용자가 한 시간마다 다시 로그인해야 하고,
  * 긴 수명 하나로만 운영하면 탈취당했을 때 2주 동안 뚫린다. 그래서 나눈다.
@@ -59,9 +52,8 @@ public class JwtProvider {
     /**
      * 설정된 비밀키 문자열을 서명용 키로 바꾼다.
      *
-     * 키가 없거나 짧으면 **여기서 즉시 실패**시킨다. 이 클래스는 스프링이 뜰 때 만들어지므로,
-     * 잘못된 설정은 서버가 뜨는 순간 드러난다. 이 검사가 없으면 서버는 멀쩡히 떠 있다가
-     * 첫 로그인 요청에서야 500을 내고, 그때는 이미 배포가 끝난 뒤다.
+     * 키가 없거나 짧으면여기서 즉시 실패시킨다. 이 클래스는 스프링이 뜰 때 만들어지므로,
+     * 잘못된 설정은 서버가 뜨는 순간 드러난다. (사실상 테스트 검증용)
      */
     private SecretKey toKey(String secret) {
         if (secret == null || secret.getBytes(StandardCharsets.UTF_8).length < MIN_SECRET_BYTES) {
@@ -101,8 +93,7 @@ public class JwtProvider {
      * 액세스 토큰에서 userId를 꺼낸다.
      *
      * 없거나·위조됐거나·만료됐거나·용도가 다르면 모두 {@link ErrorCode#UNAUTHORIZED}다.
-     * 이유를 응답으로 구분해주지 않는 이유는, 공격자에게 "서명은 맞는데 만료됐다" 같은
-     * 힌트를 주지 않기 위해서다. 원인은 로그에만 남긴다. (tour_api_erd.md 4-1)
+     * 원인은 로그에만 남긴다. (tour_api_erd.md 4-1)
      */
     public Long getUserIdFromAccessToken(String token) {
         return getUserId(token, TYPE_ACCESS, ErrorCode.UNAUTHORIZED);
@@ -133,9 +124,7 @@ public class JwtProvider {
      * 토큰의 서명과 만료를 검사하고 내용을 꺼낸다.
      *
      * `parseSignedClaims`는 서명이 맞지 않거나 이미 만료된 토큰이면 예외를 던진다.
-     * jjwt가 던지는 예외는 모두 {@link JwtException}의 자식이므로 한 번에 잡아
-     * 우리 쪽 예외 체계로 바꿔준다. 라이브러리 예외가 서비스 계층까지 새어 나가면
-     * 나중에 라이브러리를 갈아탈 때 손댈 곳이 많아진다.
+     * jwt가 던지는 예외는 모두 {@link JwtException}의 자식이므로 한 번에 잡아 커스텀 예외 체계로 바꿔준다.
      */
     private Claims parseClaims(String token, ErrorCode errorOnFailure) {
         if (token == null || token.isBlank()) {

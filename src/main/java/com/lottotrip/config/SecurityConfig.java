@@ -51,14 +51,11 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
 
                 // 서버가 로그인 상태를 기억하지 않는다(무상태). 필요한 정보는 토큰 안에 다 들어 있다.
-                // 세션을 쓰면 서버를 여러 대로 늘릴 때 "그 세션이 어느 서버에 있나" 문제가 생긴다.
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_PATHS).permitAll()
                         // 명시하지 않은 나머지는 전부 인증 필요.
-                        // 반대로("기본 허용, 필요한 것만 차단") 두면 API를 새로 추가할 때
-                        // 깜빡 잊는 순간 그대로 뚫린다.
                         .anyRequest().authenticated()
                 )
 

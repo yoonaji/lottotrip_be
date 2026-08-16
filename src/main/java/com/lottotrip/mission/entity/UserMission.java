@@ -56,9 +56,7 @@ public class UserMission {
 
     /**
      * 인증 사진·영상 주소.
-     *
-     * 인증은 GPS 좌표 비교 방식으로 우선 구현하므로 **비어 있을 수 있다.**
-     * 사진 인증을 전제로 NOT NULL로 잡으면 GPS 인증 자체가 막힌다.
+     * 인증은 GPS 좌표 비교 방식으로 우선 구현하므로 비어 있을 수 있다.
      */
     @Column(name = "certified_media_url", columnDefinition = "TEXT")
     private String certifiedMediaUrl;

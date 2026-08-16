@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
  * 소셜 로그인 연동 정보. (tour_api_erd.md 1 — social_auth)
  *
  * 한 회원이 카카오·애플·구글을 각각 연결할 수 있으므로 회원 하나에 여러 줄이 붙는다.
- * 로그인은 이메일이 아니라 `provider + providerUserId`로 사람을 찾는다.
+ * 로그인은 `provider + providerUserId`로 사람을 찾는다.
  */
 @Entity
 @Table(

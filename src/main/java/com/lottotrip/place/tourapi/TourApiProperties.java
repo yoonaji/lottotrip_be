@@ -9,7 +9,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * 이 record의 필드에 **이름을 맞춰 자동으로 담아 주는** 표시다.
  * `base-url` 같은 하이픈 표기가 `baseUrl`에 들어간다.
  *
- * 설정을 이렇게 따로 묶는 이유는 **값이 코드에 박히지 않게** 하기 위해서다.
+ * 설정을 이렇게 따로 묶는 이유는 값이 코드에 박히지 않게 하기 위해서다.
  * 인증키를 소스에 적으면 저장소에 그대로 올라간다.
  *
  * @param baseUrl     국문 관광정보(`KorService2`) 주소
@@ -35,13 +35,13 @@ public record TourApiProperties(
     /**
      * 무장애 서비스 주소의 기본값.
      *
-     * 국문 관광정보와 **같은 호스트·같은 인증키**를 쓰고 경로 끝만 다르다.
+     * 국문 관광정보와 같은 호스트·같은 인증키를 쓰고 경로 끝만 다르다.
      * 설정에서 빠뜨려도 무장애 조회가 통째로 죽지 않도록 기본값을 준다.
      */
     private static final String DEFAULT_WITH_BASE_URL = "https://apis.data.go.kr/B551011/KorWithService2";
 
     /**
-     * record의 **compact 생성자**. 값이 필드에 담기기 *직전*에 끼어들어 다듬을 수 있다.
+     * record의 compact 생성자. 값이 필드에 담기기 *직전*에 끼어들어 다듬을 수 있다.
      *
      * 설정이 비어 있을 때 기본값을 여기서 채워 두면, 이 record를 쓰는 쪽은
      * "null일 수도 있다"를 신경 쓰지 않아도 된다.

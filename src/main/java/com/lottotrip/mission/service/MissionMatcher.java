@@ -18,7 +18,7 @@ import java.util.random.RandomGenerator;
 /**
  * 뽑힌 장소에 제시할 미션을 고른다. (roadmap 6-5, 2026-08-13 회의 확정)
  *
- * **규칙:** 장소에 등록된 미션이 {@link #REQUIRED_MISSION_COUNT}개 미만이면 생성해 채운 뒤,
+ * 규칙: 장소에 등록된 미션이 {@link #REQUIRED_MISSION_COUNT}개 미만이면 생성해 채운 뒤,
  * 확보된 전체에서 랜덤 1개를 제시한다. **미션이 하나도 없는 장소가 뽑혀도 응답이 비지 않게** 하려는 것이다.
  *
  * 생성 방식은 {@link MissionGenerator}에 맡긴다 — 아직 보류라 구현체가 바뀔 수 있고,
@@ -28,12 +28,7 @@ import java.util.random.RandomGenerator;
 @Service
 public class MissionMatcher {
 
-    /**
-     * 장소마다 확보해 둘 미션 수. (2026-08-13 회의 확정)
-     *
-     * 1개만 두면 같은 장소를 다시 뽑았을 때 늘 같은 미션이 나온다.
-     * 여러 개를 두고 그중에서 고르면 재방문에도 다른 미션이 나올 수 있다.
-     */
+    /**장소마다 확보해 둘 미션 수*/
     private static final int REQUIRED_MISSION_COUNT = 3;
 
     private final MissionRepository missionRepository;
@@ -42,12 +37,6 @@ public class MissionMatcher {
     /** 난수원. 공급자로 받는 이유는 `RealtimePlaceFinder`와 같다(스레드 안전 + 테스트 고정). */
     private final Supplier<RandomGenerator> randomSource;
 
-    /**
-     * 스프링이 쓰는 생성자.
-     *
-     * `@Autowired`를 붙인 이유: 생성자가 둘 이상이면 스프링은 어느 것을 쓸지 몰라
-     * 기본 생성자를 찾다가 실패한다(6-4에서 실제로 컨텍스트가 통째로 뜨지 않았다).
-     */
     @Autowired
     public MissionMatcher(MissionRepository missionRepository, MissionGenerator missionGenerator) {
         this(missionRepository, missionGenerator, ThreadLocalRandom::current);
@@ -64,13 +53,11 @@ public class MissionMatcher {
     /**
      * 이 장소에 제시할 미션 하나를 고른다.
      *
-     * **비어 있을 수 있다.** 생성기가 하나도 만들지 못하고 기존 미션도 없는 경우다.
-     * 여기서 예외를 던지면 **곁들이는 정보인 미션 때문에 슬롯 전체가 실패한다.**
-     * 장소는 정상적으로 뽑혔으므로 미션 없이라도 응답이 나가는 편이 낫다.
+     * 비어 있을 수 있다. = 생성기가 하나도 만들지 못하고 기존 미션도 없는 경우
+     * 장소는 정상적으로 뽑혔으므로 미션 없이라도 응답이 나가는 편이 낫다고 판단했다.
      *
-     * ⚠️ **동시 요청은 아직 막지 않았다**(미확정 항목 "6-5 ④"). 같은 장소로 두 요청이
-     * 동시에 오면 각자 생성해 비슷한 미션이 중복 저장될 수 있다. `(place_id, title)`에
-     * UNIQUE를 거는 방법이 있으나 스키마 변경이라 별도로 정한다.
+     * ⚠️ 동시 요청은 아직 막지 않았다. 같은 장소로 두 요청이
+     * 동시에 오면 각자 생성해 비슷한 미션이 중복 저장될 수 있다.
      */
     @Transactional
     public Optional<Mission> matchFor(Place place) {
@@ -89,14 +76,7 @@ public class MissionMatcher {
         return Optional.of(missions.get(randomSource.get().nextInt(missions.size())));
     }
 
-    /**
-     * 모자란 만큼 만들어 저장한다.
-     *
-     * **저장하는 이유:** 저장하지 않으면 같은 장소가 뽑힐 때마다 매번 새로 만든다.
-     * 생성이 LLM으로 정해지면 그 비용과 지연이 요청마다 되풀이된다.
-     *
-     * 요청한 개수를 다 못 받아도 그대로 진행한다. 3개를 못 채웠다고 슬롯을 실패시킬 이유가 없다.
-     */
+    /**미션 LLM 통해서 생성 후 저장.*/
     private List<Mission> generateAndSave(Place place, int shortfall) {
         List<Mission> generated = missionGenerator.generate(place, shortfall);
         if (generated == null || generated.isEmpty()) {

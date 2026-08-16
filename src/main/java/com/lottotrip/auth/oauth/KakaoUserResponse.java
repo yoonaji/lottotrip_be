@@ -6,17 +6,17 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * 카카오 사용자 정보 API(`GET /v2/user/me`)의 응답 모양.
  *
- * 이 클래스는 **카카오가 주는 JSON을 그대로 옮긴 것**이고, {@link OAuthUserInfo}는
+ * 이 클래스는 카카오가 주는 JSON을 그대로 옮긴 것. {@link OAuthUserInfo}는
  * 우리 서비스가 쓰는 공통 모양이다. 둘을 나누는 이유는 카카오가 응답 구조를 바꾸더라도
  * 고칠 곳이 여기 하나로 끝나게 하기 위해서다.
  *
  * `@JsonIgnoreProperties(ignoreUnknown = true)`는 "모르는 필드가 와도 무시하라"는 뜻이다.
- * 이게 없으면 카카오가 필드를 하나 추가하는 순간 **파싱이 통째로 실패해** 로그인이 막힌다.
+ * 이게 없으면 카카오가 필드를 하나 추가하는 순간 파싱이 통째로 실패해 로그인이 막힌다.
  *
  * `@JsonProperty`는 JSON의 이름과 자바 필드 이름을 연결한다. 카카오는
  * `kakao_account`처럼 밑줄 표기를 쓰고 자바는 `kakaoAccount`처럼 낙타 표기를 쓰기 때문이다.
  *
- * 동의하지 않은 항목은 카카오가 **응답에서 아예 뺀다.** 그래서 `kakaoAccount`·`profile`은
+ * 동의하지 않은 항목은 카카오가 응답에서 아예 뺀다. 그래서 `kakaoAccount`·`profile`은
  * 언제든 `null`일 수 있고, 이를 안전하게 꺼내려고 아래 편의 메서드를 둔다.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)

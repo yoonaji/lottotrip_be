@@ -34,20 +34,7 @@ public class TemplateMissionGenerator implements MissionGenerator {
 
     private static final String GUIDE = "현장에 도착하면 완료할 수 있는 미션입니다.";
 
-    /**
-     * 문구 틀 하나당 미션 하나를 만든다. **틀보다 많이 요청하면 있는 만큼만 준다.**
-     *
-     * 억지로 채우려면 같은 문구에 번호를 덧붙이는 수밖에 없는데, 그러면
-     * `"경포대에 도착해 인증하기 (2)"` 같은 **사람이 쓰지 않을 문구가 사용자에게 그대로 나간다.**
-     * 폴백 생성기가 만드는 제목은 화면에 보이는 값이므로 개수보다 문구가 우선이다.
-     *
-     * **적게 줘도 되는 근거:** 부르는 쪽인 {@link MissionMatcher}가 이미
-     * "요청보다 적게 받는 것"을 허용한다(로그만 남기고 진행). 미션은 곁들이는 정보라
-     * 개수가 모자라다고 슬롯을 실패시킬 이유가 없기 때문이다.
-     *
-     * 참고로 현재 요청되는 최대치는 3개(`REQUIRED_MISSION_COUNT`)라 틀 4개로 늘 충분하다.
-     * 이 상한을 5 이상으로 올리면 **여기서 조용히 모자라게 준다** — 그때는 틀을 늘려야 한다.
-     */
+    /**문구 틀 하나당 미션 하나를 만든다. 틀보다 많이 요청하면 있는 만큼만 준다.*/
     @Override
     public List<Mission> generate(Place place, int count) {
         if (count <= 0) {

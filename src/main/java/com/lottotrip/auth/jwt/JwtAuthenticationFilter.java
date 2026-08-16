@@ -54,11 +54,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /**
-     * `Authorization: Bearer xxx` 형태에서 토큰만 떼어 낸다.
-     *
-     * 스킴 이름의 대소문자는 RFC 6750에서 구분하지 않으므로 `bearer`도 받아들인다.
-     */
+    /**`Authorization: Bearer xxx` 형태에서 토큰만 떼어 낸다.*/
     private Optional<String> resolveToken(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
@@ -75,9 +71,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * SecurityContextHolder는 "지금 이 요청을 처리 중인 사람"을 담아 두는 보관함이다.
      * 스레드마다 따로 존재해서(ThreadLocal), 동시에 들어온 다른 요청과 섞이지 않는다.
      * 컨트롤러는 나중에 `@AuthenticationPrincipal`로 여기 담긴 userId를 꺼내 쓴다.
-     *
-     * 권한 목록을 빈 리스트로 두는 이유: 이 서비스에는 관리자·일반회원 같은 역할 구분이 없다.
-     * "로그인했는가/아닌가"만 판단하면 되므로 권한을 나눌 필요가 없다.
      */
     private void authenticate(String token, HttpServletRequest request) {
         try {

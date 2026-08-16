@@ -24,14 +24,13 @@ public class MissionController {
     private final MissionService missionService;
 
     /**
-     * 미션 완료 처리.
+     * 미션 완료 처리
      *
-     * **200을 돌려준다.** 코스 담기(7-1)와 달리 명세가 200으로 적혀 있다.
+     * 200을 돌려준다. 코스 담기(7-1)와 달리 명세가 200으로 적혀 있다.
      * 기록이 새로 생기긴 하지만, 프론트가 다루는 것은 "그 미션이 완료됐다"는 상태이지
      * 새로 만들어진 `user_missions` 행이 아니다.
      *
-     * 회원 번호는 `@AuthenticationPrincipal`로 받는다. 요청 본문으로 받으면
-     * **남의 번호를 적어 대신 완료시킬 수 있다.**
+     * 회원 번호는 `@AuthenticationPrincipal`로 받는다.
      */
     @PostMapping("/{missionId}/complete")
     public ApiResponse<MissionCompleteResponse> complete(@AuthenticationPrincipal Long userId,
