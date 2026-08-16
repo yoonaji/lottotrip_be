@@ -127,7 +127,12 @@ public class TourApiClient {
     // ---------- 공개 조회 메서드 ----------
 
     /**
-     * 지역 기반 관광 정보 목록. `places`의 주 재료다.
+     * 지역 기반 관광 정보 목록(`areaBasedList2`).
+     *
+     * ⚠️ **과거 배치 방식(결정 10)에서 쓰던 것. 현재 사용 안 함** — 호출처가 테스트뿐이다.
+     * 강원 전역을 미리 적재하던 시절 `places`의 주 재료였다. 결정 12로 `draw`가
+     * 좌표 기반 조회({@link #fetchLocationBasedList})를 직접 쓰면서 부르는 곳이 없어졌다.
+     * 지울지 여부는 사용자에게 확인한다.
      *
      * @param areaCode 시도 코드 (1 = 서울 …)
      * @param pageNo   1부터 시작하는 페이지 번호
@@ -256,7 +261,14 @@ public class TourApiClient {
         return response.items().stream().findFirst();
     }
 
-    /** 장소 이미지 목록. `place_media`를 채운다. */
+    /**
+     * 장소 이미지 목록(`detailImage2`).
+     *
+     * ⚠️ **과거 배치 방식(결정 10)에서 쓰던 것. 현재 사용 안 함** — 호출처가 테스트뿐이다.
+     * 지금 `place_media`를 채우는 것은 목록 응답의 `firstimage`이고, `PlaceUpserter`가 담는다.
+     * **되살아날 여지가 있다** — 슬롯 결과 조회에 이미지를 여러 장 실을지가 프론트와 미확정이다.
+     * 지울지 여부는 사용자에게 확인한다.
+     */
     public List<TourApiImageItem> fetchDetailImages(String contentId) {
         URI uri = uri(OP_DETAIL_IMAGE, params(
                 "contentId", contentId,
@@ -269,7 +281,7 @@ public class TourApiClient {
     }
 
     /**
-     * 지역 코드 목록. (5-3에서 `states`·`cities` 적재에 쓴다)
+     * 지역 코드 목록. `RegionSeeder`가 `states`·`cities`를 시드할 때 쓴다. (5-3)
      *
      * @param areaCode null이면 시도 목록, 값을 주면 그 시도의 시군구 목록
      */
@@ -292,7 +304,8 @@ public class TourApiClient {
      * 실제 호출과 실패 처리. 모든 조회가 이 통로를 지난다.
      *
      * 실패를 한곳에 모으는 이유는, 오퍼레이션마다 따로 처리하면 **어느 하나에서 빠뜨리기** 때문이다.
-     * 배치가 조용히 빈 결과를 받아 넘어가는 것이 가장 나쁘다.
+     * 실패를 조용히 빈 결과로 흘려보내는 것이 가장 나쁘다 —
+     * `draw`가 `NO_PLACE_FOUND`(후보 없음)로 답해 버려 원인이 감춰진다.
      */
     private <T> TourApiResponse<T> call(URI uri, ParameterizedTypeReference<TourApiResponse<T>> type) {
         try {

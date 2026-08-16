@@ -15,10 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 슬롯 결과 조회. **"룰렛 세부사항 조회"를 겸한다.** (roadmap 6-7, 결정 10)
+ * 슬롯 결과 조회. **"룰렛 세부사항 조회"를 겸한다.** (roadmap 6-7)
  *
- * **이 서비스가 공모전 규정을 지탱한다.** 결정 10으로 추첨이 DB에서만 이뤄지므로,
- * **사용자 요청에 반응해 공공데이터 API를 부르는 지점은 여기 하나뿐이다**(결정 7 — 오픈API 실시간 호출 필수).
+ * **공모전 규정(결정 7 — 오픈API 실시간 호출 필수)을 지탱하는 두 지점 중 하나다.**
+ * 한때는 여기가 유일했으나(결정 10에서는 추첨이 DB 조회였다),
+ * 결정 12로 `draw`도 실시간 호출을 하게 되어 **지금은 두 곳이다.**
  * 실시간 호출 자체는 5-10의 {@link PlaceDetailService}가 맡고, 이 클래스는
  * **슬롯을 찾고 권한을 보고 응답을 엮는** 일을 한다.
  */

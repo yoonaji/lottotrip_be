@@ -15,18 +15,21 @@ import java.util.Optional;
 public interface PlaceMediaRepository extends JpaRepository<PlaceMedia, Long> {
 
     /**
-     * 이 장소에 같은 URL의 이미지가 이미 있는지. (5-9 적재)
+     * 이 장소에 같은 URL의 이미지가 이미 있는지.
      *
-     * 적재는 여러 번 돌아간다(중간 실패 후 재실행, 정기 갱신). 막지 않으면 돌릴 때마다
+     * 랜덤 추첨이라 같은 장소가 여러 번 뽑힌다. 막지 않으면 뽑힐 때마다
      * 같은 이미지 행이 하나씩 늘어난다. `places`는 `content_id` UNIQUE로 막혀 있지만
-     * `place_media`에는 그런 제약이 없다.
+     * `place_media`에는 그런 제약이 없어 `PlaceUpserter`가 이 메서드로 확인한다.
      */
     boolean existsByPlaceIdAndMediaUrl(Long placeId, String mediaUrl);
 
     /**
-     * 이 장소의 대표 이미지. 슬롯 응답의 `thumbnailUrl`이 된다. (6-6)
+     * 이 장소의 대표 이미지.
      *
-     * 실측 채움률이 18%라 **대부분의 장소에는 없다.** 그래서 `Optional`이다.
+     * ⚠️ **과거 배치 방식(결정 10)에서 쓰던 것. 현재 사용 안 함** — 호출처가 main·테스트 모두 없다.
+     * 그때는 DB에서 뽑았으므로 썸네일도 `place_media`에서 다시 조회해야 했다.
+     * 결정 12에서는 `draw`가 받은 응답의 `firstimage`를 그대로 응답에 실어
+     * **다시 조회할 이유가 없다.** 지울지 여부는 사용자에게 확인한다.
      */
     Optional<PlaceMedia> findFirstByPlaceIdOrderByIdAsc(Long placeId);
 }
