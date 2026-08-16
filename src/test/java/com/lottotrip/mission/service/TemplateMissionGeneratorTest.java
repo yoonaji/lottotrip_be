@@ -77,13 +77,14 @@ class TemplateMissionGeneratorTest {
     }
 
     @Test
-    @DisplayName("요청이 많아도 제목이 겹치지 않는다 — 템플릿 개수를 넘어설 때")
-    void staysDistinctBeyondTemplateCount() {
-        // 템플릿이 몇 개든 요청이 그보다 많으면 돌려쓰게 된다. 그때 제목이 그대로
-        // 반복되면 위와 같은 문제가 생긴다.
+    @DisplayName("템플릿 개수보다 많이 요청하면 있는 만큼만 준다")
+    void stopsAtTemplateCount() {
+        // 억지로 채우려면 같은 문구에 번호를 덧붙이는 수밖에 없는데,
+        // 그러면 "사천진해변에 도착해 인증하기 (2)" 같은 사람이 쓰지 않을 문구가 사용자에게 나간다.
+        // 부르는 쪽(MissionMatcher)이 "요청보다 적게 받는 것"을 이미 허용하므로 적게 주는 편이 낫다.
         List<Mission> missions = generator.generate(PLACE, 12);
 
-        assertThat(missions).hasSize(12)
+        assertThat(missions).hasSize(4)
                 .extracting(Mission::getTitle).doesNotHaveDuplicates();
     }
 }
