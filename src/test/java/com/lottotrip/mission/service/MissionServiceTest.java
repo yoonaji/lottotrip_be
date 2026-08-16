@@ -189,6 +189,43 @@ class MissionServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("이미 완료한 미션이면 ALREADY_COMPLETED")
+    void failsWhenAlreadyCompleted() {
+        // 명세의 409다. 막지 않으면 (user_id, mission_id) UNIQUE에 걸려 500이 나간다.
+        Mission mission = missionAtBeach();
+        missionService.complete(user.getId(), mission.getId(), requestFrom(0));
+
+        assertThatThrownBy(() -> missionService.complete(user.getId(), mission.getId(), requestFrom(0)))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_COMPLETED);
+    }
+
+    @Test
+    @DisplayName("중복 완료를 막아도 기록은 하나만 남는다")
+    void keepsSingleRecordOnDuplicate() {
+        Mission mission = missionAtBeach();
+        missionService.complete(user.getId(), mission.getId(), requestFrom(0));
+
+        assertThatThrownBy(() -> missionService.complete(user.getId(), mission.getId(), requestFrom(0)))
+                .isInstanceOf(CustomException.class);
+
+        assertThat(userMissionRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("완료 여부를 위치보다 먼저 본다")
+    void checksDuplicateBeforeLocation() {
+        // 이미 완료한 미션에 엉뚱한 좌표로 다시 요청하면 위치 실패(422)가 아니라 중복(409)이어야 한다.
+        // "이미 끝난 미션"이 사용자에게 더 정확한 설명이고, 다시 가라고 안내하면 헛걸음을 시킨다.
+        Mission mission = missionAtBeach();
+        missionService.complete(user.getId(), mission.getId(), requestFrom(0));
+
+        assertThatThrownBy(() -> missionService.complete(user.getId(), mission.getId(), requestFrom(5)))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ALREADY_COMPLETED);
+    }
+
+    @Test
     @DisplayName("다른 회원이 같은 미션을 완료해도 서로 막지 않는다")
     void allowsDifferentUsersOnSameMission() {
         // 미션은 장소에 붙은 공용 자산이다. 한 사람이 완료했다고 다른 사람이 못 하면 안 된다.
