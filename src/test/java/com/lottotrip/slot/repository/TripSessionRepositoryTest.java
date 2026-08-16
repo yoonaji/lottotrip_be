@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 세션 find-or-create의 "find" 부분 검증. (tour_api_erd.md 2-1)
  *
- * <p>서버는 슬롯 요청마다 "이 회원의 가장 최근 세션"을 찾아 12시간 이내인지 본다.
+ * 서버는 슬롯 요청마다 "이 회원의 가장 최근 세션"을 찾아 12시간 이내인지 본다.
  * 여기서는 조회만 확인하고, 12시간 판정은 6-1에서 붙인다.
  */
 @DataJpaTest

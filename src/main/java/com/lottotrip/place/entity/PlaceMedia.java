@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 /**
  * 장소 이미지. (tour_api_erd.md 1 — place_media)
  *
- * <p>{@code media_url}이 슬롯 응답의 {@code thumbnailUrl}로 나간다.
+ * `media_url`이 슬롯 응답의 `thumbnailUrl`로 나간다.
  * 한 장소에 여러 장이 붙을 수 있어 별도 테이블로 분리돼 있다.
  */
 @Entity
@@ -40,7 +40,7 @@ public class PlaceMedia {
     @Column(name = "media_url", nullable = false, columnDefinition = "TEXT")
     private String mediaUrl;
 
-    /** ERD 컬럼명은 {@code m_type}이다. 필드명은 뜻이 드러나도록 mediaType으로 둔다. */
+    /** ERD 컬럼명은 `m_type`이다. 필드명은 뜻이 드러나도록 mediaType으로 둔다. */
     @Enumerated(EnumType.STRING)
     @Column(name = "m_type", nullable = false, length = 20)
     private MediaType mediaType;

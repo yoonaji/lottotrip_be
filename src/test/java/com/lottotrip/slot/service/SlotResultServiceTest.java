@@ -40,11 +40,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 슬롯 결과 조회 검증. (roadmap 6-7, tour_api_erd.md 4-2 + 결정 10)
  *
- * <p><b>이 API가 "룰렛 세부사항 조회"를 겸한다.</b> 결정 10으로 추첨이 DB에서만 이뤄지므로,
- * <b>사용자 요청에 반응해 공공데이터 API를 부르는 지점이 여기 하나뿐이다.</b>
+ * **이 API가 "룰렛 세부사항 조회"를 겸한다.** 결정 10으로 추첨이 DB에서만 이뤄지므로,
+ * **사용자 요청에 반응해 공공데이터 API를 부르는 지점이 여기 하나뿐이다.**
  * 공모전 규정(결정 7 — 오픈API 실시간 호출 필수)을 만족시키는 것도 이 호출이다.
  *
- * <p>그래서 <b>바깥이 실패해도 우리 정보는 나가야 한다</b>는 성질이 특히 중요하다.
+ * 그래서 **바깥이 실패해도 우리 정보는 나가야 한다**는 성질이 특히 중요하다.
  * 공공데이터포털이 멈췄다고 사용자가 방금 뽑은 장소를 못 보면 안 된다.
  */
 @DataJpaTest
@@ -112,8 +112,8 @@ class SlotResultServiceTest extends PostgresContainerSupport {
     /**
      * 미션까지 제시된 슬롯을 만든다. (결정 14)
      *
-     * <p>draw가 실제로 하는 일과 같다 — 제시한 미션을 슬롯에 함께 남긴다.
-     * 이 값이 있어야 조회가 <b>draw 때 보여 준 바로 그 미션</b>을 돌려줄 수 있다.
+     * draw가 실제로 하는 일과 같다 — 제시한 미션을 슬롯에 함께 남긴다.
+     * 이 값이 있어야 조회가 **draw 때 보여 준 바로 그 미션**을 돌려줄 수 있다.
      */
     private SavedSlot savedSlotOf(User owner, Mission presented) {
         TripSession session = tripSessionRepository.save(TripSession.create(

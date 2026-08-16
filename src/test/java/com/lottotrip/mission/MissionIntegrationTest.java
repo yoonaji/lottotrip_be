@@ -29,17 +29,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 미션 API 통합 검증. (roadmap 8-4, tour_api_erd.md 4-5)
  *
- * <p>판정 로직 자체는 {@code MissionLocationVerifierTest}(8-1)와 {@code MissionServiceTest}(8-2·8-3)가
- * 이미 덮고 있다. 여기서는 <b>HTTP 경계에서만 드러나는 것</b>을 본다.
- * <ul>
- *   <li>인증이 실제로 걸리는가(401 {@code COMMON_401})</li>
- *   <li>본문 검증이 서비스 이전에 도는가(400 {@code COMMON_400}) — 좌표가 빠지거나 범위를 벗어난 경우</li>
- *   <li>명세의 에러 4종이 그 상태 코드·코드값으로 나가는가
- *       ({@code MISSION_001} 404 / {@code MISSION_002} 409 / {@code MISSION_003} 422)</li>
- *   <li>성공이 <b>200</b>인가 — 코스 담기(201)와 다르다</li>
- * </ul>
+ * 판정 로직 자체는 `MissionLocationVerifierTest`(8-1)와 `MissionServiceTest`(8-2·8-3)가
+ * 이미 덮고 있다. 여기서는 **HTTP 경계에서만 드러나는 것**을 본다.
+ *   - 인증이 실제로 걸리는가(401 `COMMON_401`)
+ *   - 본문 검증이 서비스 이전에 도는가(400 `COMMON_400`) — 좌표가 빠지거나 범위를 벗어난 경우
+ *   - 명세의 에러 4종이 그 상태 코드·코드값으로 나가는가
+ *       (`MISSION_001` 404 / `MISSION_002` 409 / `MISSION_003` 422)
+ *   - 성공이 **200**인가 — 코스 담기(201)와 다르다
  *
- * <p><b>바깥 호출이 없다.</b> 미션 완료는 좌표를 받아 우리 DB의 장소와 거리만 잰다.
+ * **바깥 호출이 없다.** 미션 완료는 좌표를 받아 우리 DB의 장소와 거리만 잰다.
  * TourAPI도 Claude API도 부르지 않으므로 막을 것이 없다.
  */
 @SpringBootTest
@@ -96,7 +94,7 @@ class MissionIntegrationTest extends PostgresContainerSupport {
         return "/api/v1/missions/" + missionId + "/complete";
     }
 
-    /** 장소에서 정북으로 {@code km}만큼 떨어진 지점을 찍은 요청 본문. */
+    /** 장소에서 정북으로 `km`만큼 떨어진 지점을 찍은 요청 본문. */
     private String bodyFrom(double km) {
         return "{ \"latitude\": %s, \"longitude\": %s }"
                 .formatted(PLACE_LAT + km * DEGREES_PER_KM, PLACE_LNG);

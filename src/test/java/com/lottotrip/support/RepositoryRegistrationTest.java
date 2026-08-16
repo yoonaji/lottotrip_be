@@ -32,8 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Repository 등록 및 기본 CRUD 검증. (roadmap 3-7, 3-8)
  *
- * <p>Repository는 인터페이스만 선언하면 스프링이 구현체를 자동으로 만들어 준다.
- * 다만 패키지 위치가 스캔 범위를 벗어나면 <b>조용히 만들어지지 않는다.</b>
+ * Repository는 인터페이스만 선언하면 스프링이 구현체를 자동으로 만들어 준다.
+ * 다만 패키지 위치가 스캔 범위를 벗어나면 **조용히 만들어지지 않는다.**
  * 그 상태는 실제로 쓰는 시점에야 드러나므로, 여기서 미리 전부 주입해 본다.
  */
 @DataJpaTest

@@ -26,10 +26,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 세션 find-or-create 검증. (roadmap 6-1, tour_api_erd.md 결정 1)
  *
- * <p><b>프론트는 세션의 존재를 모른다.</b> {@code sessionId}를 보내지 않으므로, 서버가 회원 기준으로
+ * **프론트는 세션의 존재를 모른다.** `sessionId`를 보내지 않으므로, 서버가 회원 기준으로
  * "12시간 이내 세션이 있는가"를 매 슬롯 요청마다 판단해 재사용하거나 새로 만든다.
  *
- * <p>DB는 진짜를 쓴다. 재사용 판정이 {@code created_at} 정렬 조회에 기대고 있어,
+ * DB는 진짜를 쓴다. 재사용 판정이 `created_at` 정렬 조회에 기대고 있어,
  * 시간이 실제로 저장되고 실제로 정렬되어야 의미가 있다.
  */
 @DataJpaTest
@@ -65,9 +65,9 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
     /**
      * 세션의 생성 시각을 과거로 민다.
      *
-     * <p>{@code createdAt}은 {@code @CreationTimestamp}라 저장 시점에 자동으로 채워진다.
+     * `createdAt`은 `@CreationTimestamp`라 저장 시점에 자동으로 채워진다.
      * "12시간이 지난 세션"을 만들려면 저장한 뒤 시각을 직접 바꾸는 수밖에 없다.
-     * 영속성 컨텍스트에 남은 값이 DB와 어긋나지 않도록 {@code clear()}로 비운다.
+     * 영속성 컨텍스트에 남은 값이 DB와 어긋나지 않도록 `clear()`로 비운다.
      */
     private void ageSession(TripSession session, int hoursAgo) {
         em.flush();

@@ -27,19 +27,17 @@ import java.util.Optional;
 /**
  * 한국관광공사 TourAPI 호출 담당. (roadmap 5-1)
  *
- * <p>이 클래스는 <b>바깥과 통신하는 일만</b> 한다. 받아온 값을 우리 테이블에 넣는 것은 5-2가 한다.
+ * 이 클래스는 **바깥과 통신하는 일만** 한다. 받아온 값을 우리 테이블에 넣는 것은 5-2가 한다.
  * 이렇게 나눠 두면 "API가 이상한가, 우리 저장 로직이 이상한가"를 따로 볼 수 있다.
  *
- * <p>구조는 4-4-1 {@code KakaoTokenVerifier}와 같다. {@code RestClient}로 부르고, 응답을 record로 받고,
+ * 구조는 4-4-1 `KakaoTokenVerifier`와 같다. `RestClient`로 부르고, 응답을 record로 받고,
  * 실패는 {@link ErrorCode#SERVICE_UNAVAILABLE}로 모은다.
  *
- * <h2>이 API를 다룰 때 조심할 점</h2>
- * <ol>
- *   <li><b>HTTP 200인데 실패일 수 있다.</b> 인증키 오류·할당량 초과가 본문 {@code resultCode}로만 온다.</li>
- *   <li><b>인증키를 두 번 인코딩하면 안 된다.</b> 키에 {@code + / =}가 섞여 있어 흔히 깨진다.</li>
- *   <li><b>결과가 0건이면 {@code items}가 빈 문자열로 온다.</b> 객체를 기대하면 파싱이 터진다.</li>
- *   <li><b>키가 거부되면 JSON이 아니라 XML 에러 문서가 온다.</b></li>
- * </ol>
+ * ## 이 API를 다룰 때 조심할 점
+ *   1. **HTTP 200인데 실패일 수 있다.** 인증키 오류·할당량 초과가 본문 `resultCode`로만 온다.
+ *   2. **인증키를 두 번 인코딩하면 안 된다.** 키에 `+ / =`가 섞여 있어 흔히 깨진다.
+ *   3. **결과가 0건이면 `items`가 빈 문자열로 온다.** 객체를 기대하면 파싱이 터진다.
+ *   4. **키가 거부되면 JSON이 아니라 XML 에러 문서가 온다.**
  */
 @Slf4j
 @Component
@@ -54,7 +52,7 @@ public class TourApiClient {
     /**
      * 목록 정렬 기준(A = 제목순).
      *
-     * <p>정렬을 지정하지 않으면 페이지를 넘길 때마다 서버가 주는 순서가 달라질 수 있다.
+     * 정렬을 지정하지 않으면 페이지를 넘길 때마다 서버가 주는 순서가 달라질 수 있다.
      * 그러면 같은 장소를 두 번 받거나 아예 놓친다. 순서를 고정해야 페이지 반복이 믿을 만해진다.
      */
     private static final String ARRANGE_BY_TITLE = "A";
@@ -62,7 +60,7 @@ public class TourApiClient {
     /**
      * 좌표 기반 목록의 정렬 기준(E = 거리순).
      *
-     * <p>가까운 곳부터 받으므로, 페이지를 끝까지 넘기지 않아도 쓸 만한 후보를 확보할 수 있다.
+     * 가까운 곳부터 받으므로, 페이지를 끝까지 넘기지 않아도 쓸 만한 후보를 확보할 수 있다.
      */
     private static final String ARRANGE_BY_DISTANCE = "E";
 
@@ -75,10 +73,10 @@ public class TourApiClient {
     /**
      * 이 값 이하로 남으면 경고를 남긴다.
      *
-     * <p><b>왜 감시하는가.</b> 2026-08-14에 페이지 순회 버그로 하루치 1,000회를 통째로 태웠는데,
-     * 그 사실을 <b>429를 맞고 나서야</b> 알았다. 잔량이 응답에 실려 오므로 <b>소진되기 전에</b> 알 수 있다.
+     * **왜 감시하는가.** 2026-08-14에 페이지 순회 버그로 하루치 1,000회를 통째로 태웠는데,
+     * 그 사실을 **429를 맞고 나서야** 알았다. 잔량이 응답에 실려 오므로 **소진되기 전에** 알 수 있다.
      *
-     * <p><b>왜 매번 찍지 않는가.</b> 호출마다 로그를 남기면 정상 운영 중에도 줄이 계속 쌓여
+     * **왜 매번 찍지 않는가.** 호출마다 로그를 남기면 정상 운영 중에도 줄이 계속 쌓여
      * 정작 위험한 순간에 아무도 보지 않는다. 드물게 나와야 눈에 띈다.
      */
     private static final int QUOTA_WARNING_THRESHOLD = 100;
@@ -99,13 +97,11 @@ public class TourApiClient {
     /**
      * 이 클라이언트 전용 JSON 변환기.
      *
-     * <p>기본 변환기를 그대로 쓰면 두 가지에서 걸린다.
-     * <ul>
-     *   <li>결과 0건일 때의 {@code "items": ""} → 객체 자리에 문자열이 와서 파싱 실패</li>
-     *   <li>{@code Content-Type}이 {@code application/json}이 아닌 경우 → 처리할 변환기가 없음</li>
-     * </ul>
+     * 기본 변환기를 그대로 쓰면 두 가지에서 걸린다.
+     *   - 결과 0건일 때의 `"items": ""` → 객체 자리에 문자열이 와서 파싱 실패
+     *   - `Content-Type`이 `application/json`이 아닌 경우 → 처리할 변환기가 없음
      *
-     * <p>전역 설정을 건드리지 않고 <b>이 클라이언트에만</b> 적용하는 이유는,
+     * 전역 설정을 건드리지 않고 **이 클라이언트에만** 적용하는 이유는,
      * 관대한 설정이 서비스 전체에 퍼지면 다른 곳에서 진짜 잘못된 데이터도 조용히 넘어가기 때문이다.
      * 개발자 B의 코드에도 영향을 준다.
      */
@@ -131,7 +127,7 @@ public class TourApiClient {
     // ---------- 공개 조회 메서드 ----------
 
     /**
-     * 지역 기반 관광 정보 목록. {@code places}의 주 재료다.
+     * 지역 기반 관광 정보 목록. `places`의 주 재료다.
      *
      * @param areaCode 시도 코드 (1 = 서울 …)
      * @param pageNo   1부터 시작하는 페이지 번호
@@ -150,9 +146,9 @@ public class TourApiClient {
     }
 
     /**
-     * 좌표 기반 관광 정보 목록. <b>슬롯 추첨의 후보가 전부 여기서 나온다.</b> (roadmap 6-11, 결정 12)
+     * 좌표 기반 관광 정보 목록. **슬롯 추첨의 후보가 전부 여기서 나온다.** (roadmap 6-11, 결정 12)
      *
-     * <p>국문 관광정보({@link TourApiService#KOREAN})를 부르는 짧은 형태다.
+     * 국문 관광정보({@link TourApiService#KOREAN})를 부르는 짧은 형태다.
      *
      * @see #fetchLocationBasedList(TourApiService, double, double, int, String, int)
      */
@@ -165,18 +161,18 @@ public class TourApiClient {
     /**
      * 좌표 기반 관광 정보 목록. (roadmap 6-11, 결정 12)
      *
-     * <p>응답의 {@code dist}가 요청 좌표로부터의 거리(미터)라 <b>거리 계산을 따로 하지 않아도 된다.</b>
+     * 응답의 `dist`가 요청 좌표로부터의 거리(미터)라 **거리 계산을 따로 하지 않아도 된다.**
      *
-     * <p><b>⚠️ 반경에 상한이 없다.</b> 예전에는 20,000m를 넘기면 이 메서드가 막았다. "넘기면 API가
-     * 조용히 잘린 결과를 준다"고 적혀 있었으나 <b>실측(2026-08-15) 결과 사실이 아니었다</b> —
+     * **⚠️ 반경에 상한이 없다.** 예전에는 20,000m를 넘기면 이 메서드가 막았다. "넘기면 API가
+     * 조용히 잘린 결과를 준다"고 적혀 있었으나 **실측(2026-08-15) 결과 사실이 아니었다** —
      * 강릉 기준 20km 763건 / 30km 880건 / 50km 1,290건으로 정직하게 늘어난다.
-     * 이 허구의 상한 때문에 {@code CAR}(30km)를 태울 수 없다고 오해하고 있었다.
+     * 이 허구의 상한 때문에 `CAR`(30km)를 태울 수 없다고 오해하고 있었다.
      *
-     * <p><b>⚠️ 진짜 상한은 {@code numOfRows}의 1,000이다.</b> 후보가 그보다 많으면
-     * {@code arrange=E}(거리순) 덕에 <b>먼 곳부터 잘린다.</b> 서울 30km는 후보 4,181건 중
+     * **⚠️ 진짜 상한은 `numOfRows`의 1,000이다.** 후보가 그보다 많으면
+     * `arrange=E`(거리순) 덕에 **먼 곳부터 잘린다.** 서울 30km는 후보 4,181건 중
      * 가까운 1,000건만 와서 실질 반경이 6.4km가 된다. 수도권을 다루게 되면 이 지점을 먼저 봐야 한다(결정 15).
      *
-     * <p>⚠️ <b>{@code mapX}에 경도, {@code mapY}에 위도를 넣는다.</b> 수학 좌표계의 x·y라서
+     * ⚠️ **`mapX`에 경도, `mapY`에 위도를 넣는다.** 수학 좌표계의 x·y라서
      * 흔히 쓰는 "위도·경도" 순서와 반대다. 뒤집어 보내도 API는 오류 대신 0건이나 엉뚱한 장소를
      * 정상 응답으로 주기 때문에, 틀려도 드러나지 않고 추첨 결과만 조용히 이상해진다.
      *
@@ -197,11 +193,11 @@ public class TourApiClient {
     /**
      * 페이지 크기까지 지정하는 형태. (roadmap 6-11)
      *
-     * <p>추첨은 후보 <b>전체</b>를 한 번에 받아야 그중에서 고를 수 있으므로 설정값(기본 100)이 아니라
+     * 추첨은 후보 **전체**를 한 번에 받아야 그중에서 고를 수 있으므로 설정값(기본 100)이 아니라
      * API 상한인 1,000을 직접 넘긴다. 반면 다른 조회는 그렇게 크게 받을 이유가 없다.
      * "얼마나 받을지"는 부르는 쪽의 사정이라 인자로 열어 둔다.
      *
-     * @param numOfRows 한 번에 받을 건수. <b>API 상한은 1,000이고 넘겨도 1,000까지만 온다</b>(실측)
+     * @param numOfRows 한 번에 받을 건수. **API 상한은 1,000이고 넘겨도 1,000까지만 온다**(실측)
      */
     public TourApiPage<TourApiPlaceItem> fetchLocationBasedList(
             TourApiService service, double latitude, double longitude,
@@ -232,11 +228,11 @@ public class TourApiClient {
     /**
      * 반경이 말이 되는 값인지 확인한다.
      *
-     * <p><b>상한은 없다</b>(위 설명 참조). 0 이하만 막는다.
+     * **상한은 없다**(위 설명 참조). 0 이하만 막는다.
      *
-     * <p>{@code CustomException}이 아니라 {@link IllegalArgumentException}인 이유는
-     * {@link #requireConfigured()}와 같다. 반경은 사용자가 보내는 값이 아니라 {@code TransportType}에서
-     * <b>우리가 계산하는 값</b>이므로, 0 이하라면 사용자 입력이 잘못된 것이 아니라 <b>우리 코드의 잘못</b>이다.
+     * `CustomException`이 아니라 {@link IllegalArgumentException}인 이유는
+     * {@link #requireConfigured()}와 같다. 반경은 사용자가 보내는 값이 아니라 `TransportType`에서
+     * **우리가 계산하는 값**이므로, 0 이하라면 사용자 입력이 잘못된 것이 아니라 **우리 코드의 잘못**이다.
      * 사용자에게 보여줄 에러가 아니라 개발 중에 터져야 하는 신호다.
      */
     private void requireValidRadius(int radiusMeters) {
@@ -246,9 +242,9 @@ public class TourApiClient {
     }
 
     /**
-     * 장소 하나의 공통 상세 정보. {@code places.description}을 채운다.
+     * 장소 하나의 공통 상세 정보. `places.description`을 채운다.
      *
-     * <p>없을 수도 있으므로 {@link Optional}로 돌려준다. null을 돌려주면 받는 쪽이
+     * 없을 수도 있으므로 {@link Optional}로 돌려준다. null을 돌려주면 받는 쪽이
      * 검사를 잊기 쉬운데, Optional은 "비어 있을 수 있다"를 타입으로 알려 준다.
      */
     public Optional<TourApiDetailItem> fetchDetailCommon(String contentId) {
@@ -260,7 +256,7 @@ public class TourApiClient {
         return response.items().stream().findFirst();
     }
 
-    /** 장소 이미지 목록. {@code place_media}를 채운다. */
+    /** 장소 이미지 목록. `place_media`를 채운다. */
     public List<TourApiImageItem> fetchDetailImages(String contentId) {
         URI uri = uri(OP_DETAIL_IMAGE, params(
                 "contentId", contentId,
@@ -273,7 +269,7 @@ public class TourApiClient {
     }
 
     /**
-     * 지역 코드 목록. (5-3에서 {@code states}·{@code cities} 적재에 쓴다)
+     * 지역 코드 목록. (5-3에서 `states`·`cities` 적재에 쓴다)
      *
      * @param areaCode null이면 시도 목록, 값을 주면 그 시도의 시군구 목록
      */
@@ -295,7 +291,7 @@ public class TourApiClient {
     /**
      * 실제 호출과 실패 처리. 모든 조회가 이 통로를 지난다.
      *
-     * <p>실패를 한곳에 모으는 이유는, 오퍼레이션마다 따로 처리하면 <b>어느 하나에서 빠뜨리기</b> 때문이다.
+     * 실패를 한곳에 모으는 이유는, 오퍼레이션마다 따로 처리하면 **어느 하나에서 빠뜨리기** 때문이다.
      * 배치가 조용히 빈 결과를 받아 넘어가는 것이 가장 나쁘다.
      */
     private <T> TourApiResponse<T> call(URI uri, ParameterizedTypeReference<TourApiResponse<T>> type) {
@@ -327,10 +323,10 @@ public class TourApiClient {
     /**
      * 남은 일일 호출이 얼마 없으면 경고를 남긴다. (roadmap 6-9)
      *
-     * <p><b>실패해도 조용히 넘어간다.</b> 이건 부가 정보를 읽는 감시 장치이므로,
-     * 헤더가 없거나 숫자가 아니라고 조회 자체를 실패시키면 <b>감시 장치가 본체를 망가뜨리는</b> 셈이 된다.
+     * **실패해도 조용히 넘어간다.** 이건 부가 정보를 읽는 감시 장치이므로,
+     * 헤더가 없거나 숫자가 아니라고 조회 자체를 실패시키면 **감시 장치가 본체를 망가뜨리는** 셈이 된다.
      *
-     * <p>할당량은 <b>서비스·오퍼레이션마다 따로</b> 계산된다(2026-08-15 실측).
+     * 할당량은 **서비스·오퍼레이션마다 따로** 계산된다(2026-08-15 실측).
      * 그래서 어느 URI에서 나온 값인지 함께 남긴다 — "무엇이 소진되고 있는가"를 알아야 조치할 수 있다.
      */
     private void checkRemainingQuota(HttpHeaders headers, URI uri) {
@@ -368,12 +364,12 @@ public class TourApiClient {
     /**
      * 요청 URL을 만든다.
      *
-     * <p><b>인증키는 우리가 직접 한 번만 인코딩한다.</b> 그리고 {@code build(true)}로
+     * **인증키는 우리가 직접 한 번만 인코딩한다.** 그리고 `build(true)`로
      * "이미 인코딩된 값이니 손대지 말라"고 알린다.
      *
-     * <p>왜 이렇게까지 하나? 인증키에는 {@code +} {@code /} {@code =}가 섞여 있다.
-     * 그런데 {@code +}는 URL 쿼리에서 <b>공백</b>으로 해석되는 관례가 있어 그대로 두면 키가 망가지고,
-     * 이미 인코딩된 키(%2B…)를 다시 인코딩하면 {@code %252B}가 되어 역시 망가진다.
+     * 왜 이렇게까지 하나? 인증키에는 `+` `/` `=`가 섞여 있다.
+     * 그런데 `+`는 URL 쿼리에서 **공백**으로 해석되는 관례가 있어 그대로 두면 키가 망가지고,
+     * 이미 인코딩된 키(%2B…)를 다시 인코딩하면 `%252B`가 되어 역시 망가진다.
      * 둘 다 "인증되지 않은 키" 오류로 나타나서 원인을 찾기 어렵다.
      */
     /** 국문 관광정보를 부르는 짧은 형태. */
@@ -403,8 +399,8 @@ public class TourApiClient {
     /**
      * 인증키가 없으면 네트워크를 타기 전에 멈춘다.
      *
-     * <p>{@code CustomException}이 아니라 {@link IllegalStateException}인 이유:
-     * 이것은 사용자 요청 처리 중 생긴 문제가 아니라 <b>서버 설정 실수</b>다.
+     * `CustomException`이 아니라 {@link IllegalStateException}인 이유:
+     * 이것은 사용자 요청 처리 중 생긴 문제가 아니라 **서버 설정 실수**다.
      * 사용자에게 돌려줄 응답 코드가 필요한 자리가 아니고, 조용히 넘어가면 안 되는 종류다.
      */
     private void requireConfigured() {
@@ -426,7 +422,7 @@ public class TourApiClient {
     /**
      * 로그에 남길 URL에서 인증키를 가린다.
      *
-     * <p>실패 로그에 URL을 통째로 찍으면 인증키가 로그 파일·모니터링 도구에 그대로 남는다.
+     * 실패 로그에 URL을 통째로 찍으면 인증키가 로그 파일·모니터링 도구에 그대로 남는다.
      * 로그는 지우기도 어렵고 여러 곳에 복제되므로, 애초에 찍지 않는 편이 낫다.
      */
     static String maskServiceKey(String url) {

@@ -17,10 +17,10 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@code trip_sessions} / {@code saved_slots} 테이블 매핑 검증.
+ * `trip_sessions` / `saved_slots` 테이블 매핑 검증.
  * (tour_api_erd.md 1 — trip_sessions / saved_slots)
  *
- * <p>세션은 프론트가 만들지 않는다. 서버가 회원 기준으로 12시간 이내 세션을 찾아 재사용하고,
+ * 세션은 프론트가 만들지 않는다. 서버가 회원 기준으로 12시간 이내 세션을 찾아 재사용하고,
  * 없으면 새로 만든다(find-or-create). 그 판정 로직은 6-1에서 붙인다.
  */
 @DataJpaTest

@@ -42,13 +42,13 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 슬롯 돌리기 전체 흐름 검증. (roadmap 6-13, 결정 12)
  *
- * <p>세션 확보(6-1) → 반경(6-2) → <b>실시간 조회·추첨(6-11)</b> → <b>장소 저장(6-12)</b>
- * → 미션 매칭(6-5) → {@code saved_slots} 저장까지가 한 흐름이다.
+ * 세션 확보(6-1) → 반경(6-2) → **실시간 조회·추첨(6-11)** → **장소 저장(6-12)**
+ * → 미션 매칭(6-5) → `saved_slots` 저장까지가 한 흐름이다.
  *
- * <p>⚠️ <b>결정 12로 크게 달라진 지점.</b> 예전에는 후보를 DB에 미리 심어 두고 뽑았지만,
- * 이제는 매번 TourAPI에서 받아 온다. 그래서 이 테스트는 <b>DB에 장소를 심지 않고 응답을 흉내 낸다.</b>
+ * ⚠️ **결정 12로 크게 달라진 지점.** 예전에는 후보를 DB에 미리 심어 두고 뽑았지만,
+ * 이제는 매번 TourAPI에서 받아 온다. 그래서 이 테스트는 **DB에 장소를 심지 않고 응답을 흉내 낸다.**
  *
- * <p>DB는 진짜를 쓴다. {@code saved_slots}가 실제로 저장돼야 {@code slotId}가 나오고,
+ * DB는 진짜를 쓴다. `saved_slots`가 실제로 저장돼야 `slotId`가 나오고,
  * 그 값이 7단계 코스 추가의 입력이 된다. 바깥 호출만 {@link MockRestServiceServer}로 막는다.
  */
 @DataJpaTest
@@ -105,7 +105,7 @@ class SlotDrawServiceTest extends PostgresContainerSupport {
     }
 
     /**
-     * 후보 1건짜리 응답. <b>후보를 하나만 두어 결과를 결정적으로 만든다</b> —
+     * 후보 1건짜리 응답. **후보를 하나만 두어 결과를 결정적으로 만든다** —
      * 이 테스트들은 "무엇이 뽑히는가"가 아니라 "흐름이 이어지는가"를 본다(추첨 자체는 6-11에서 검증했다).
      */
     private static String oneCandidate(String title, String firstImage, String dist) {

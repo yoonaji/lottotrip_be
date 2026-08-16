@@ -16,12 +16,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 헬스 체크 통합 테스트. (roadmap 2-3)
  *
- * <p>지금까지의 단위 테스트는 컨트롤러만 따로 떼어 내(standaloneSetup) 검증했다.
+ * 지금까지의 단위 테스트는 컨트롤러만 따로 떼어 내(standaloneSetup) 검증했다.
  * 그래서 "필터·시큐리티·JSON 직렬화까지 다 거친 진짜 요청"이 어떻게 되는지는 확인하지 못했다.
  * 통합 테스트는 애플리케이션 전체를 실제로 띄워서, 요청이 들어와 응답이 나갈 때까지의
  * 전 구간이 명세대로 동작하는지 확인한다.
  *
- * <p>DB는 {@link PostgresContainerSupport}가 띄우는 진짜 PostgreSQL을 쓴다. 헬스 체크는
+ * DB는 {@link PostgresContainerSupport}가 띄우는 진짜 PostgreSQL을 쓴다. 헬스 체크는
  * "DB에 실제로 붙을 수 있는가"를 확인하는 API라, 가짜 DataSource로는 확인 자체가 무의미하다.
  */
 @SpringBootTest

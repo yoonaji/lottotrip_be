@@ -9,8 +9,8 @@ import static org.assertj.core.api.Assertions.within;
 /**
  * 두 좌표 사이 거리 계산 검증. (roadmap 6-3, tour_api_erd.md 결정 5)
  *
- * <p>결정 10으로 추첨이 DB에서 이뤄지면서 TourAPI가 주던 {@code dist}를 못 받게 됐다.
- * <b>거리 계산이 우리 몫이 되었고</b>, 슬롯 응답의 {@code distanceKm}가 여기서 나온다.
+ * 결정 10으로 추첨이 DB에서 이뤄지면서 TourAPI가 주던 `dist`를 못 받게 됐다.
+ * **거리 계산이 우리 몫이 되었고**, 슬롯 응답의 `distanceKm`가 여기서 나온다.
  * 값이 틀리면 "반경 10km"라고 해 놓고 엉뚱한 거리의 장소가 뽑힌다.
  */
 class HaversineTest {

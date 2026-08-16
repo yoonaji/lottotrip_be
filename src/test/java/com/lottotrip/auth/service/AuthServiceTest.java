@@ -16,11 +16,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * provider별 검증 구현체 선택 로직 검증. (roadmap 4-3-3)
  *
- * <p>스프링은 {@code List<SocialTokenVerifier>}를 생성자로 받으면 <b>그 타입의 빈을 전부 모아</b>
+ * 스프링은 `List<SocialTokenVerifier>`를 생성자로 받으면 **그 타입의 빈을 전부 모아**
  * 넣어 준다. 그래서 provider가 늘어나도 이 클래스는 고치지 않아도 된다.
  * (tour_api_erd.md 2-3 — 개방·폐쇄 원칙)
  *
- * <p>여기서는 스프링을 띄우지 않고 리스트를 직접 만들어 넘긴다. 생성자 주입의 장점이
+ * 여기서는 스프링을 띄우지 않고 리스트를 직접 만들어 넘긴다. 생성자 주입의 장점이
  * 바로 이것 — 테스트에서 프레임워크 없이 객체를 만들 수 있다.
  */
 class AuthServiceTest {

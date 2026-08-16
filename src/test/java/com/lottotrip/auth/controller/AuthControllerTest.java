@@ -34,8 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 로그인 API의 HTTP 계약 검증. (roadmap 4-5, tour_api_erd.md 4-1)
  *
- * <p>서비스는 가짜로 끼운다. 여기서 볼 것은 로그인 로직이 아니라
- * <b>요청 형식·응답 형식·에러 상태 코드</b>가 명세와 맞는지다. 로직은 {@code AuthServiceLoginTest}가 본다.
+ * 서비스는 가짜로 끼운다. 여기서 볼 것은 로그인 로직이 아니라
+ * **요청 형식·응답 형식·에러 상태 코드**가 명세와 맞는지다. 로직은 `AuthServiceLoginTest`가 본다.
  */
 class AuthControllerTest {
 
@@ -67,8 +67,8 @@ class AuthControllerTest {
     /**
      * 로그인된 상태를 만든다.
      *
-     * <p>{@code @AuthenticationPrincipal}은 요청에 담긴 principal이 아니라
-     * <b>{@code SecurityContextHolder}(현재 요청을 처리 중인 사람을 담아 두는 보관함)</b>를 본다.
+     * `@AuthenticationPrincipal`은 요청에 담긴 principal이 아니라
+     * **`SecurityContextHolder`(현재 요청을 처리 중인 사람을 담아 두는 보관함)**를 본다.
      * 실제 앱에서는 4-2의 JWT 필터가 채워 주지만, 이 테스트는 컨트롤러만 띄우므로 직접 넣는다.
      */
     private void authenticateAs(Long userId) {

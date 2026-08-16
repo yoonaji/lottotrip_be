@@ -19,9 +19,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * JWT 발급·검증·클레임 추출 검증. (roadmap 4-1)
  *
- * <p>액세스 토큰과 리프레시 토큰은 형태는 같지만 <b>거절될 때의 에러 코드가 다르다.</b>
- * 명세상 액세스 토큰이 없거나 만료면 {@code UNAUTHORIZED}, 리프레시 토큰이 잘못되면
- * {@code INVALID_REFRESH_TOKEN}이다. (tour_api_erd.md 4-1)
+ * 액세스 토큰과 리프레시 토큰은 형태는 같지만 **거절될 때의 에러 코드가 다르다.**
+ * 명세상 액세스 토큰이 없거나 만료면 `UNAUTHORIZED`, 리프레시 토큰이 잘못되면
+ * `INVALID_REFRESH_TOKEN`이다. (tour_api_erd.md 4-1)
  * 그래서 추출 메서드를 용도별로 따로 둔다.
  */
 class JwtProviderTest {

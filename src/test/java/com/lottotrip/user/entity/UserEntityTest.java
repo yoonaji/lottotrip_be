@@ -11,12 +11,12 @@ import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@code users} 테이블 매핑 검증. (tour_api_erd.md 1 — users)
+ * `users` 테이블 매핑 검증. (tour_api_erd.md 1 — users)
  *
- * <p>{@code @DataJpaTest}는 JPA에 필요한 것만 띄운다(컨트롤러·시큐리티는 뜨지 않는다).
+ * `@DataJpaTest`는 JPA에 필요한 것만 띄운다(컨트롤러·시큐리티는 뜨지 않는다).
  * 테스트마다 트랜잭션을 열고 끝나면 되돌리므로, 앞 테스트가 넣은 데이터가 뒤 테스트에 남지 않는다.
  *
- * <p>{@code replace = NONE}을 준 이유: 그냥 두면 스프링이 클래스패스의 H2로 DataSource를 바꿔치기한다.
+ * `replace = NONE`을 준 이유: 그냥 두면 스프링이 클래스패스의 H2로 DataSource를 바꿔치기한다.
  * 우리는 운영과 같은 PostgreSQL로 확인해야 하므로 바꿔치기를 막는다.
  */
 @DataJpaTest

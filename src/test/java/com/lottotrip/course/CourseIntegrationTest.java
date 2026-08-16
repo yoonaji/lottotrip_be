@@ -38,17 +38,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 코스 API 통합 검증. (roadmap 7-5, tour_api_erd.md 4-4)
  *
- * <p>부품 동작은 {@code CourseServiceTest}가 이미 덮고 있으므로, 여기서는
- * <b>HTTP 경계에서만 드러나는 것</b>에 집중한다.
- * <ul>
- *   <li>인증이 실제로 걸리는가(401 {@code COMMON_401})</li>
- *   <li>본문 검증이 서비스 이전에 도는가(400 {@code COMMON_400})</li>
- *   <li>공통 응답 포맷({@code success}·{@code data}·{@code error})과 에러 코드가 명세대로 나가는가</li>
- *   <li>상태 코드가 맞는가 — 담기만 <b>201</b>이고 나머지는 200이다</li>
- * </ul>
+ * 부품 동작은 `CourseServiceTest`가 이미 덮고 있으므로, 여기서는
+ * **HTTP 경계에서만 드러나는 것**에 집중한다.
+ *   - 인증이 실제로 걸리는가(401 `COMMON_401`)
+ *   - 본문 검증이 서비스 이전에 도는가(400 `COMMON_400`)
+ *   - 공통 응답 포맷(`success`·`data`·`error`)과 에러 코드가 명세대로 나가는가
+ *   - 상태 코드가 맞는가 — 담기만 **201**이고 나머지는 200이다
  *
- * <p><b>바깥 호출이 없다.</b> 코스는 TourAPI를 부르지 않는다 — 담을 때 슬롯이 이미 가진
- * {@code place_id}만 쓰고, 조회도 우리 DB만 본다. 그래서 슬롯 쪽과 달리 막을 것이 없다.
+ * **바깥 호출이 없다.** 코스는 TourAPI를 부르지 않는다 — 담을 때 슬롯이 이미 가진
+ * `place_id`만 쓰고, 조회도 우리 DB만 본다. 그래서 슬롯 쪽과 달리 막을 것이 없다.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -104,7 +102,7 @@ class CourseIntegrationTest extends PostgresContainerSupport {
         return slotOf(owner, place, null);
     }
 
-    /** {@code presented}가 draw 때 제시한 미션이다. 코스 조회는 이 미션을 그대로 보여 준다(7-6). */
+    /** `presented`가 draw 때 제시한 미션이다. 코스 조회는 이 미션을 그대로 보여 준다(7-6). */
     private SavedSlot slotOf(User owner, Place place, Mission presented) {
         TripSession session = tripSessionRepository.save(TripSession.create(
                 owner, BudgetLevel.MEDIUM, TransportType.WALK, 37.7519, 128.8761));

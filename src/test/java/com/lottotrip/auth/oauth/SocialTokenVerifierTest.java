@@ -17,20 +17,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 소셜 토큰 검증 공통 흐름 검증. (roadmap 4-3-2)
  *
- * <p>provider마다 검증 방식이 다르지만(카카오=API 호출, 구글·애플=JWT 서명 검증)
- * <b>앞뒤로 붙는 검사는 똑같다.</b> 그 공통 부분을 부모가 고정하고 자식은 가운데만 채우는
+ * provider마다 검증 방식이 다르지만(카카오=API 호출, 구글·애플=JWT 서명 검증)
+ * **앞뒤로 붙는 검사는 똑같다.** 그 공통 부분을 부모가 고정하고 자식은 가운데만 채우는
  * 구조가 템플릿 메서드 패턴이다. (tour_api_erd.md 2-3)
  *
- * <p>여기서는 부모의 흐름만 검증한다. 실제 provider 구현체는 4-4에서 붙는다.
- * 그래서 테스트 안에 <b>가짜 자식</b>을 만들어 "부모가 자식을 언제 부르는지"를 본다.
+ * 여기서는 부모의 흐름만 검증한다. 실제 provider 구현체는 4-4에서 붙는다.
+ * 그래서 테스트 안에 **가짜 자식**을 만들어 "부모가 자식을 언제 부르는지"를 본다.
  */
 class SocialTokenVerifierTest {
 
     /**
      * 테스트용 가짜 구현체.
      *
-     * <p>doVerify가 몇 번 불렸는지 세어 둔다. 부모가 <b>사전 검사에서 걸러낸 요청을
-     * 자식에게 넘기지 않는지</b>를 확인하려면 호출 여부를 알아야 하기 때문이다.
+     * doVerify가 몇 번 불렸는지 세어 둔다. 부모가 **사전 검사에서 걸러낸 요청을
+     * 자식에게 넘기지 않는지**를 확인하려면 호출 여부를 알아야 하기 때문이다.
      */
     private static class FakeVerifier extends SocialTokenVerifier {
 

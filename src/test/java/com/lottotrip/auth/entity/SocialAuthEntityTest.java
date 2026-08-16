@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@code social_auth} 테이블 매핑 검증. (tour_api_erd.md 1 — social_auth)
+ * `social_auth` 테이블 매핑 검증. (tour_api_erd.md 1 — social_auth)
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

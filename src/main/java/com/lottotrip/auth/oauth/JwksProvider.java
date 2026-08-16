@@ -15,10 +15,10 @@ import java.util.Map;
 /**
  * 소셜 서비스의 공개키(JWKS)를 받아 와 캐시한다.
  *
- * <p>구글·애플이 같은 방식(JWKS)을 쓰므로 이 클래스는 <b>주소만 바꿔서 재사용</b>한다.
+ * 구글·애플이 같은 방식(JWKS)을 쓰므로 이 클래스는 **주소만 바꿔서 재사용**한다.
  * 4-4-3에서 애플을 붙일 때 이 클래스를 그대로 쓴다.
  *
- * <p>스프링 빈이 아니다. provider마다 주소가 다르므로 각 검증 구현체가 자기 것을 하나씩 만들어 갖는다.
+ * 스프링 빈이 아니다. provider마다 주소가 다르므로 각 검증 구현체가 자기 것을 하나씩 만들어 갖는다.
  */
 @Slf4j
 public class JwksProvider {
@@ -26,7 +26,7 @@ public class JwksProvider {
     /**
      * 공개키를 캐시하는 시간.
      *
-     * <p>로그인마다 구글에 공개키를 받으러 가면 두 가지가 나빠진다. 응답이 그만큼 느려지고,
+     * 로그인마다 구글에 공개키를 받으러 가면 두 가지가 나빠진다. 응답이 그만큼 느려지고,
      * 구글이 잠깐 느려질 때 우리 로그인도 같이 느려진다. 공개키는 자주 바뀌지 않으므로 캐시한다.
      */
     private static final Duration CACHE_TTL = Duration.ofHours(1);
@@ -35,9 +35,9 @@ public class JwksProvider {
     private final String jwksUri;
 
     /**
-     * {@code volatile}은 "여러 스레드가 이 값을 볼 때 항상 최신을 보게 하라"는 표시다.
+     * `volatile`은 "여러 스레드가 이 값을 볼 때 항상 최신을 보게 하라"는 표시다.
      *
-     * <p>웹 서버는 요청마다 다른 스레드가 이 코드를 지나간다. 이 표시가 없으면 A 스레드가 갱신한
+     * 웹 서버는 요청마다 다른 스레드가 이 코드를 지나간다. 이 표시가 없으면 A 스레드가 갱신한
      * 캐시를 B 스레드가 한동안 못 볼 수 있다.
      */
     private volatile Map<String, PublicKey> cachedKeys = Map.of();
@@ -49,9 +49,9 @@ public class JwksProvider {
     }
 
     /**
-     * 토큰 헤더의 {@code kid}에 해당하는 공개키를 찾는다.
+     * 토큰 헤더의 `kid`에 해당하는 공개키를 찾는다.
      *
-     * <p>캐시에 없으면 <b>한 번 더 받아온다.</b> 구글은 공개키를 주기적으로 교체하는데,
+     * 캐시에 없으면 **한 번 더 받아온다.** 구글은 공개키를 주기적으로 교체하는데,
      * 캐시에 없다고 바로 실패시키면 교체 직후 모든 로그인이 실패하기 때문이다.
      */
     public PublicKey findKey(String keyId) {
@@ -82,7 +82,7 @@ public class JwksProvider {
     /**
      * JWKS를 실제로 받아 와 캐시에 넣는다.
      *
-     * <p>{@code synchronized}는 "한 번에 한 스레드만 이 메서드에 들어온다"는 뜻이다.
+     * `synchronized`는 "한 번에 한 스레드만 이 메서드에 들어온다"는 뜻이다.
      * 없으면 동시에 들어온 로그인 요청 수십 개가 각자 구글을 호출한다.
      */
     private synchronized Map<String, PublicKey> fetchKeys() {

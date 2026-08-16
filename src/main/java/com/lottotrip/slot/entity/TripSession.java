@@ -24,10 +24,10 @@ import java.time.LocalDateTime;
 /**
  * 여행 세션. (tour_api_erd.md 1 — trip_sessions, 결정 1)
  *
- * <p>프론트는 세션의 존재를 모른다. 서버가 회원 기준으로 12시간 이내 세션을 찾아 재사용하고
+ * 프론트는 세션의 존재를 모른다. 서버가 회원 기준으로 12시간 이내 세션을 찾아 재사용하고
  * 없으면 새로 만든다(find-or-create). 그 판정은 6-1에서 구현한다.
  *
- * <p>여기 저장된 예산·이동수단·좌표는 <b>그 세션의 첫 슬롯 기준 참고값</b>이다.
+ * 여기 저장된 예산·이동수단·좌표는 **그 세션의 첫 슬롯 기준 참고값**이다.
  * 같은 세션에서 조건을 바꿔 다시 돌려도 이 값들은 갱신하지 않는다(결정 1의 A안).
  * 그래서 값을 바꾸는 메서드를 두지 않았다.
  */
@@ -59,7 +59,7 @@ public class TripSession {
     @Column(nullable = false, length = 20)
     private TransportType transportation;
 
-    /** ERD의 {@code accommodation_coord POINT}를 위도·경도로 나눈 것. (결정 5) */
+    /** ERD의 `accommodation_coord POINT`를 위도·경도로 나눈 것. (결정 5) */
     @Column(name = "accommodation_latitude", nullable = false)
     private Double accommodationLatitude;
 

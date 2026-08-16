@@ -25,11 +25,11 @@ import java.time.LocalDateTime;
 /**
  * 장소 마스터. (tour_api_erd.md 1 — places)
  *
- * <p><b>강원 전역을 배치로 미리 적재한다.</b> (roadmap 결정 10 — 배치 적재 + 세부조회 실시간)
+ * **강원 전역을 배치로 미리 적재한다.** (roadmap 결정 10 — 배치 적재 + 세부조회 실시간)
  * 슬롯 추첨은 이 테이블만 보고 하며, TourAPI를 실시간으로 부르지 않는다.
- * 공공 API 실시간 호출은 {@code GET /slot/results/&#123;slotId&#125;}(세부조회)가 담당한다.
+ * 공공 API 실시간 호출은 `GET /slot/results/{slotId}`(세부조회)가 담당한다.
  *
- * <p>⚠️ 한때 <b>결정 8(온디맨드 실시간 조회)</b>로 "미리 적재하지 않고 뽑힌 1건만 저장"하는 설계였다.
+ * ⚠️ 한때 **결정 8(온디맨드 실시간 조회)**로 "미리 적재하지 않고 뽑힌 1건만 저장"하는 설계였다.
  * 2026-08-13 회의에서 뒤집혔다. 예산·무장애 정보가 장소 코드 단위로만 조회돼,
  * 온디맨드로는 "뽑고 나서 조건 확인 → 미달이면 재추첨"이라는 루프를 피할 수 없었기 때문이다.
  */
@@ -46,10 +46,10 @@ import java.time.LocalDateTime;
 public class Place {
 
     /**
-     * 우리 DB가 채번하는 식별자. {@code saved_slots}·{@code course_items}·{@code missions}가 이 값을 참조하고,
-     * API 응답의 {@code placeId}로 나간다.
+     * 우리 DB가 채번하는 식별자. `saved_slots`·`course_items`·`missions`가 이 값을 참조하고,
+     * API 응답의 `placeId`로 나간다.
      *
-     * <p>⚠️ {@link #contentId}와 <b>다른 값이다.</b> 이쪽은 우리가, 저쪽은 TourAPI가 부여한다.
+     * ⚠️ {@link #contentId}와 **다른 값이다.** 이쪽은 우리가, 저쪽은 TourAPI가 부여한다.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,38 +57,38 @@ public class Place {
     private Long id;
 
     /**
-     * TourAPI 장소 코드({@code contentid}). <b>세부조회의 유일한 호출 키다.</b> (roadmap 5-7, 결정 10)
+     * TourAPI 장소 코드(`contentid`). **세부조회의 유일한 호출 키다.** (roadmap 5-7, 결정 10)
      *
-     * <p>{@code GET /slot/results/&#123;slotId&#125;}가 이 값으로 {@code detailCommon2}를 불러
-     * 설명·이미지를 실시간으로 받아 온다. 저장해 두지 않으면 <b>적재한 장소를 TourAPI에서 다시 찾을 방법이 없다.</b>
+     * `GET /slot/results/{slotId}`가 이 값으로 `detailCommon2`를 불러
+     * 설명·이미지를 실시간으로 받아 온다. 저장해 두지 않으면 **적재한 장소를 TourAPI에서 다시 찾을 방법이 없다.**
      * 장소명으로 재검색하는 방법은 동명 장소를 구분하지 못하고 호출도 2배가 된다.
      *
-     * <p><b>UNIQUE인 이유:</b> 배치는 여러 번 돈다(초기 적재 실패 후 재시도, 정기 갱신).
-     * 제약이 없으면 같은 장소가 두 행으로 쌓이고, <b>추첨에서 그 장소가 두 배 확률로 뽑힌다.</b>
+     * **UNIQUE인 이유:** 배치는 여러 번 돈다(초기 적재 실패 후 재시도, 정기 갱신).
+     * 제약이 없으면 같은 장소가 두 행으로 쌓이고, **추첨에서 그 장소가 두 배 확률로 뽑힌다.**
      * 조회 후 저장만으로는 배치를 두 개 동시에 돌릴 때 둘 다 통과하므로 DB 차원에서 막는다.
      */
     @Column(name = "content_id", nullable = false, length = 20)
     private String contentId;
 
     /**
-     * TourAPI 관광타입 코드({@code contenttypeid}). 12=관광지, 14=문화시설, 39=음식점 …
+     * TourAPI 관광타입 코드(`contenttypeid`). 12=관광지, 14=문화시설, 39=음식점 …
      *
-     * <p>{@code detailIntro2}는 {@link #contentId}만으로는 부족하고 이 값을 <b>함께</b> 요구한다.
+     * `detailIntro2`는 {@link #contentId}만으로는 부족하고 이 값을 **함께** 요구한다.
      * {@link #category}를 정한 근거이기도 해서, 나중에 매핑 규칙을 바꿀 때 다시 계산할 수 있다.
      *
-     * <p>응답에 나가지 않고 비어도 슬롯이 성립하므로 nullable로 둔다.
+     * 응답에 나가지 않고 비어도 슬롯이 성립하므로 nullable로 둔다.
      */
     @Column(name = "content_type_id", length = 10)
     private String contentTypeId;
 
     /**
-     * 소속 시·군. <b>배치가 채운다.</b> (roadmap 5-8)
+     * 소속 시·군. **배치가 채운다.** (roadmap 5-8)
      *
-     * <p>TourAPI는 지역을 코드({@code areacode}·{@code sigungucode})로만 준다.
-     * {@code states}·{@code cities}에 그 코드를 담을 컬럼을 추가하고 미리 시드해 두면,
+     * TourAPI는 지역을 코드(`areacode`·`sigungucode`)로만 준다.
+     * `states`·`cities`에 그 코드를 담을 컬럼을 추가하고 미리 시드해 두면,
      * 적재할 때 코드로 조회해 이을 수 있다.
      *
-     * <p><b>그래도 nullable인 이유:</b> 지역코드 시드가 아직 없는 상태에서도 장소 적재는 굴러가야 한다.
+     * **그래도 nullable인 이유:** 지역코드 시드가 아직 없는 상태에서도 장소 적재는 굴러가야 한다.
      * 여기에 NOT NULL을 걸면 시드가 하루 늦어질 때 적재 전체가 멈춘다. NULL은 "아직 잇지 않음"을 뜻한다.
      */
     @ManyToOne(fetch = FetchType.LAZY)
@@ -102,23 +102,23 @@ public class Place {
     private String description;
 
     /**
-     * 장소 분류. TourAPI {@code cat2}를 그대로 옮긴 값이다. (roadmap 6-15, 결정 16)
+     * 장소 분류. TourAPI `cat2`를 그대로 옮긴 값이다. (roadmap 6-15, 결정 16)
      *
-     * <h2>⚠️ 이 컬럼에는 CHECK 제약이 자동으로 붙는다 (결정 16)</h2>
-     * Hibernate는 {@code @Enumerated} 컬럼에 "이 값들만 허용"이라는 CHECK 제약을 만든다.
-     * 그런데 {@code ddl-auto: update}는 <b>이미 만들어진 제약을 고치지 않아서</b>, enum에 값을 더하면
+     * ## ⚠️ 이 컬럼에는 CHECK 제약이 자동으로 붙는다 (결정 16)
+     * Hibernate는 `@Enumerated` 컬럼에 "이 값들만 허용"이라는 CHECK 제약을 만든다.
+     * 그런데 `ddl-auto: update`는 **이미 만들어진 제약을 고치지 않아서**, enum에 값을 더하면
      * 그 값이 처음 저장되는 순간 실패한다(2026-08-15에 실제로 겪었다).
      *
-     * <p><b>제약 생성을 막을 방법이 없다</b>(Hibernate 6.6). {@code columnDefinition} ·
-     * {@code @JdbcTypeCode(VARCHAR)} · {@code AttributeConverter}를 모두 시도했지만 전부 생성된다.
+     * **제약 생성을 막을 방법이 없다**(Hibernate 6.6). `columnDefinition` ·
+     * `@JdbcTypeCode(VARCHAR)` · `AttributeConverter`를 모두 시도했지만 전부 생성된다.
      * 끄는 설정도 없다.
      *
-     * <p><b>그래서 운영 절차로 푼다.</b> 제약은 <b>테이블을 만들 때만</b> 생기고
-     * {@code update}가 다시 붙이지는 않으므로, <b>기존 DB에서 한 번 지우면 그 DB에서는 다시 안 생긴다.</b>
+     * **그래서 운영 절차로 푼다.** 제약은 **테이블을 만들 때만** 생기고
+     * `update`가 다시 붙이지는 않으므로, **기존 DB에서 한 번 지우면 그 DB에서는 다시 안 생긴다.**
      * 새로 만드는 DB는 그 시점 enum으로 정확히 생성되므로 애초에 어긋나지 않는다.
      * 근본 해결은 마이그레이션 도구(Flyway) 도입이다 — 배포 전에 정하기로 했다.
      *
-     * <p>길이를 30으로 둔 이유: 가장 긴 상수명이 {@code NATURE_ATTRACTION}(17자)이고
+     * 길이를 30으로 둔 이유: 가장 긴 상수명이 `NATURE_ATTRACTION`(17자)이고
      * 분류가 더 늘 수 있어 여유를 뒀다.
      */
     @Enumerated(EnumType.STRING)
@@ -129,9 +129,9 @@ public class Place {
     private String address;
 
     /**
-     * ERD는 좌표를 {@code POINT} 하나로 적어 두었지만 위도·경도 두 컬럼으로 나눠 저장한다.
+     * ERD는 좌표를 `POINT` 하나로 적어 두었지만 위도·경도 두 컬럼으로 나눠 저장한다.
      *
-     * <p>PostGIS를 도입하면 테스트·로컬·배포 환경을 모두 바꿔야 하는데, 이 서비스의 반경 검색은
+     * PostGIS를 도입하면 테스트·로컬·배포 환경을 모두 바꿔야 하는데, 이 서비스의 반경 검색은
      * 사각형 범위 필터 + 거리 계산으로 충분하다. 응답도 위도·경도를 각각 요구한다.
      */
     @Column(nullable = false)
@@ -141,13 +141,13 @@ public class Place {
     private Double longitude;
 
     /**
-     * 예산 등급. <b>지금은 채우지 않는다.</b> (roadmap 결정 9)
+     * 예산 등급. **지금은 채우지 않는다.** (roadmap 결정 9)
      *
-     * <p>TourAPI가 요금을 부분적으로만 준다. 우리가 여행지로 쓰는 <b>관광지(12)에는 요금 필드가
-     * 스키마에 아예 없고</b>, 있는 것도 {@code "※ 공연 및 행사 별 상이"} 같은 서술형이라 등급을 매길 수 없다.
+     * TourAPI가 요금을 부분적으로만 준다. 우리가 여행지로 쓰는 **관광지(12)에는 요금 필드가
+     * 스키마에 아예 없고**, 있는 것도 `"※ 공연 및 행사 별 상이"` 같은 서술형이라 등급을 매길 수 없다.
      * 핵심 기능(뽑기 → 미션)을 먼저 완성하기로 했다.
      *
-     * <p><b>기본값을 박지 않고 NULL로 두는 이유:</b> {@code MEDIUM} 같은 값을 넣어 두면
+     * **기본값을 박지 않고 NULL로 두는 이유:** `MEDIUM` 같은 값을 넣어 두면
      * 그것이 실제로 계산한 값인지 "아직 안 함" 표시인지 구분할 수 없다. 나중에 등급을 채우기로 하면
      * 어느 행을 계산해야 하는지 찾지 못하게 된다. NULL이면 "NULL인 것만 채운다"가 그대로 성립한다.
      */
@@ -156,25 +156,25 @@ public class Place {
     private BudgetLevel budgetTier;
 
     /**
-     * 뚜벅이 모드 가중치. <b>사용하지 않는다.</b> (roadmap 결정 9)
+     * 뚜벅이 모드 가중치. **사용하지 않는다.** (roadmap 결정 9)
      *
-     * <p>추첨이 이미 반경으로 거리를 제한하므로("걸어갈 수 있는가"는 반경이 담당한다)
+     * 추첨이 이미 반경으로 거리를 제한하므로("걸어갈 수 있는가"는 반경이 담당한다)
      * 별도 접근성 점수는 중복이다. TourAPI가 주지 않는 우리 값이기도 하다.
      */
     @Column(name = "public_transport_weight")
     private Integer publicTransportWeight;
 
     /**
-     * TourAPI가 알려주는 <b>장소 정보의 최종 수정일시</b>({@code modifiedtime}).
+     * TourAPI가 알려주는 **장소 정보의 최종 수정일시**(`modifiedtime`).
      *
-     * <p>정기 갱신 배치가 "무엇을 다시 받을지" 고르는 기준이다. 목록 조회는 싸고(14회) 상세 조회가
-     * 비싸므로(1,241회), 목록만 훑어 이 값을 비교하고 <b>바뀐 것만</b> 상세를 다시 받는다.
+     * 정기 갱신 배치가 "무엇을 다시 받을지" 고르는 기준이다. 목록 조회는 싸고(14회) 상세 조회가
+     * 비싸므로(1,241회), 목록만 훑어 이 값을 비교하고 **바뀐 것만** 상세를 다시 받는다.
      *
-     * <p><b>아직 쓰지 않지만 첫 적재부터 담는다.</b> 나중에 컬럼을 추가하면 이미 적재된 행은 값이 비어
+     * **아직 쓰지 않지만 첫 적재부터 담는다.** 나중에 컬럼을 추가하면 이미 적재된 행은 값이 비어
      * 비교할 대상이 없고, 결국 전체를 다시 받아야 한다. 지금 담아 두는 비용은 컬럼 하나다.
      *
-     * <p>⚠️ {@link #createdAt}과 다른 값이다. 이쪽은 <b>TourAPI 쪽에서</b> 장소 정보가 바뀐 시각이고,
-     * {@code createdAt}은 <b>우리 DB에</b> 행이 들어온 시각이다.
+     * ⚠️ {@link #createdAt}과 다른 값이다. 이쪽은 **TourAPI 쪽에서** 장소 정보가 바뀐 시각이고,
+     * `createdAt`은 **우리 DB에** 행이 들어온 시각이다.
      */
     @Column(name = "modified_time")
     private LocalDateTime modifiedTime;
@@ -184,21 +184,21 @@ public class Place {
     private LocalDateTime createdAt;
 
     /**
-     * 인자를 위치가 아니라 <b>이름으로</b> 받는다.
+     * 인자를 위치가 아니라 **이름으로** 받는다.
      *
-     * <p>필드가 11개인데 그중 {@code name}·{@code description}·{@code address}·{@code contentId}·
-     * {@code contentTypeId} 다섯이 전부 {@code String}이다. 위치로 받으면 순서를 바꿔 넣어도
-     * 컴파일이 통과하고, 하필 {@code contentId}는 세부조회의 호출 키라 잘못 들어가면
+     * 필드가 11개인데 그중 `name`·`description`·`address`·`contentId`·
+     * `contentTypeId` 다섯이 전부 `String`이다. 위치로 받으면 순서를 바꿔 넣어도
+     * 컴파일이 통과하고, 하필 `contentId`는 세부조회의 호출 키라 잘못 들어가면
      * 그 장소는 영영 조회되지 않는다. 이름을 붙이면 이 실수가 원천적으로 불가능하다.
      */
     /**
-     * TourAPI에서 다시 받아온 값으로 갱신한다. 적재 배치가 <b>이미 담은 장소를 만났을 때</b> 쓴다.
+     * TourAPI에서 다시 받아온 값으로 갱신한다. 적재 배치가 **이미 담은 장소를 만났을 때** 쓴다.
      *
-     * <p>새로 만든 {@code Place}를 통째로 받는 이유는 인자를 하나씩 나열하면 다시 12개가 되기 때문이다.
-     * 배치는 어차피 응답 항목으로 {@code Place}를 한 번 조립하므로, 그걸 그대로 넘기면 된다.
+     * 새로 만든 `Place`를 통째로 받는 이유는 인자를 하나씩 나열하면 다시 12개가 되기 때문이다.
+     * 배치는 어차피 응답 항목으로 `Place`를 한 번 조립하므로, 그걸 그대로 넘기면 된다.
      *
-     * <p><b>{@code contentId}는 바꾸지 않는다.</b> 이 행이 어느 장소인지 정하는 값이라
-     * 바뀌면 다른 장소가 되어 버린다. {@code createdAt}도 우리 DB에 처음 담긴 시각이라 그대로 둔다.
+     * **`contentId`는 바꾸지 않는다.** 이 행이 어느 장소인지 정하는 값이라
+     * 바뀌면 다른 장소가 되어 버린다. `createdAt`도 우리 DB에 처음 담긴 시각이라 그대로 둔다.
      */
     public void updateFrom(Place source) {
         this.contentTypeId = source.contentTypeId;

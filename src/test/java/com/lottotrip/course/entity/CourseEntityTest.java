@@ -23,11 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@code travel_courses} / {@code course_items} 테이블 매핑 검증.
+ * `travel_courses` / `course_items` 테이블 매핑 검증.
  * (tour_api_erd.md 1 — travel_courses / course_items)
  *
- * <p>코스는 회원이 슬롯에서 뽑은 장소를 담아 두는 목록이다.
- * 담긴 장소 하나가 {@code course_items} 한 줄이 된다.
+ * 코스는 회원이 슬롯에서 뽑은 장소를 담아 두는 목록이다.
+ * 담긴 장소 하나가 `course_items` 한 줄이 된다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

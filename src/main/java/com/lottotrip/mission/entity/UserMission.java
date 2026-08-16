@@ -24,7 +24,7 @@ import java.time.LocalDateTime;
 /**
  * 회원의 미션 수행 기록. (tour_api_erd.md 1 — user_missions)
  *
- * <p>미션을 완료 처리할 때 한 줄이 생긴다. 줄이 있다는 것 자체가 "이미 완료했다"는 뜻이다.
+ * 미션을 완료 처리할 때 한 줄이 생긴다. 줄이 있다는 것 자체가 "이미 완료했다"는 뜻이다.
  */
 @Entity
 @Table(
@@ -57,13 +57,13 @@ public class UserMission {
     /**
      * 인증 사진·영상 주소.
      *
-     * <p>인증은 GPS 좌표 비교 방식으로 우선 구현하므로 <b>비어 있을 수 있다.</b>
+     * 인증은 GPS 좌표 비교 방식으로 우선 구현하므로 **비어 있을 수 있다.**
      * 사진 인증을 전제로 NOT NULL로 잡으면 GPS 인증 자체가 막힌다.
      */
     @Column(name = "certified_media_url", columnDefinition = "TEXT")
     private String certifiedMediaUrl;
 
-    /** ERD 컬럼명은 {@code m_type}이다. 사진 인증이 아니면 비어 있다. */
+    /** ERD 컬럼명은 `m_type`이다. 사진 인증이 아니면 비어 있다. */
     @Enumerated(EnumType.STRING)
     @Column(name = "m_type", length = 20)
     private MediaType mediaType;

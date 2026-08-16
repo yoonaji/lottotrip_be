@@ -9,10 +9,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 예산 등급 변환 검증.
  *
- * <p>슬롯 요청은 금액(원)으로 들어오는데({@code budget: 50000}) 장소는 등급으로 저장돼 있다.
- * 둘을 이어 주는 변환 규칙을 enum이 직접 갖게 한다. (tour_api_erd.md 2-1의 {@code BudgetLevel.from})
+ * 슬롯 요청은 금액(원)으로 들어오는데(`budget: 50000`) 장소는 등급으로 저장돼 있다.
+ * 둘을 이어 주는 변환 규칙을 enum이 직접 갖게 한다. (tour_api_erd.md 2-1의 `BudgetLevel.from`)
  *
- * <p>DB가 필요 없는 순수 계산이므로 컨테이너를 띄우지 않는다.
+ * DB가 필요 없는 순수 계산이므로 컨테이너를 띄우지 않는다.
  */
 class BudgetLevelTest {
 

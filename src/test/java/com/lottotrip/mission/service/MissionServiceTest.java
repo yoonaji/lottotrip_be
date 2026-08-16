@@ -28,10 +28,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 미션 완료 처리 검증. (roadmap 8-2, tour_api_erd.md 4-5)
  *
- * <p><b>요청은 좌표만 준다.</b> "완료했다"를 그대로 믿지 않고 서버가 위치를 확인한다(8-1).
+ * **요청은 좌표만 준다.** "완료했다"를 그대로 믿지 않고 서버가 위치를 확인한다(8-1).
  * 믿어 버리면 집에서도 모든 미션을 완료할 수 있다.
  *
- * <p>DB는 진짜를 쓴다. {@code (user_id, mission_id)} UNIQUE 제약이 실재해야
+ * DB는 진짜를 쓴다. `(user_id, mission_id)` UNIQUE 제약이 실재해야
  * 중복 완료 방지(8-3)를 이어서 증명할 수 있다.
  */
 @DataJpaTest
@@ -83,7 +83,7 @@ class MissionServiceTest extends PostgresContainerSupport {
                 Mission.create(placeNamed("사천진해변"), "사천진해변에 도착해 인증하기", "설명", null, 100));
     }
 
-    /** 장소에서 정북으로 {@code km}만큼 떨어진 지점을 찍은 요청. */
+    /** 장소에서 정북으로 `km`만큼 떨어진 지점을 찍은 요청. */
     private MissionCompleteRequest requestFrom(double km) {
         return new MissionCompleteRequest(PLACE_LAT + km * DEGREES_PER_KM, PLACE_LNG);
     }

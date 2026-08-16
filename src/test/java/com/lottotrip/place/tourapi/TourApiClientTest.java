@@ -30,11 +30,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * TourAPI 클라이언트 검증. (roadmap 5-1)
  *
- * <p>실제 공공데이터포털을 부르지 않는다. {@link MockRestServiceServer}가 {@code RestClient} 내부의
+ * 실제 공공데이터포털을 부르지 않는다. {@link MockRestServiceServer}가 `RestClient` 내부의
  * "요청을 실제로 보내는 부품"을 가짜로 바꿔치기하므로 네트워크를 아예 타지 않는다.
  * 4-4-1 카카오 검증기 테스트와 같은 방식이다.
  *
- * <p>⚠️ <b>여기 적힌 응답 JSON은 TourAPI 문서 기준으로 작성한 가정이다.</b> 실제 응답 모양이 다르면
+ * ⚠️ **여기 적힌 응답 JSON은 TourAPI 문서 기준으로 작성한 가정이다.** 실제 응답 모양이 다르면
  * 이 테스트는 전부 통과해도 5-2 적재에서 빈 값·뒤집힌 좌표가 쌓인다. 서비스 키가 준비되면
  * 실제 응답을 1회 받아 필드명을 대조하는 절차가 따로 필요하다. (roadmap 미확정 항목)
  */
@@ -46,7 +46,7 @@ class TourApiClientTest {
     private static final String WITH_BASE_URL = "https://apis.data.go.kr/B551011/KorWithService2";
 
     /**
-     * 포털이 주는 "디코딩" 키에는 {@code +} {@code /} {@code =} 가 섞여 있다.
+     * 포털이 주는 "디코딩" 키에는 `+` `/` `=` 가 섞여 있다.
      * 이 문자들이 URL에서 어떻게 처리되는지가 이 클라이언트의 핵심 함정이라 일부러 넣었다.
      */
     private static final String SERVICE_KEY = "ab+cd/ef==";
@@ -87,14 +87,12 @@ class TourApiClientTest {
     /**
      * 좌표 기반 목록 정상 응답 1건. (5-2)
      *
-     * <p><b>이것은 가정이 아니라 2026-08-08에 실제 API에서 받아온 응답이다.</b>
+     * **이것은 가정이 아니라 2026-08-08에 실제 API에서 받아온 응답이다.**
      * 강릉 숙소 좌표(37.7519, 128.8761) 반경 20km로 호출한 결과의 첫 항목이며, 필드 구성을 그대로 옮겼다.
      *
-     * <p>여기서 두 가지가 드러난다.
-     * <ul>
-     *   <li>{@code dist} — 요청 좌표로부터의 거리(미터)를 API가 계산해 준다.</li>
-     *   <li>{@code contenttypeid: "32"}(숙박) — 필터 없이 뽑으면 모텔이 여행지로 나온다는 증거다.</li>
-     * </ul>
+     * 여기서 두 가지가 드러난다.
+     *   - `dist` — 요청 좌표로부터의 거리(미터)를 API가 계산해 준다.
+     *   - `contenttypeid: "32"`(숙박) — 필터 없이 뽑으면 모텔이 여행지로 나온다는 증거다.
      */
     private static final String LOCATION_BASED_LIST = """
             {
@@ -129,10 +127,10 @@ class TourApiClientTest {
             """;
 
     /**
-     * 결과가 0건일 때의 응답. <b>{@code items}가 객체가 아니라 빈 문자열로 온다.</b>
+     * 결과가 0건일 때의 응답. **`items`가 객체가 아니라 빈 문자열로 온다.**
      * 공공데이터포털 계열 API의 알려진 특성이라 반드시 견뎌야 한다.
      *
-     * <p>✅ 2026-08-08 실물 호출로 확인됨 — 5-1 작성 시점의 가정이 실제와 일치했다.
+     * ✅ 2026-08-08 실물 호출로 확인됨 — 5-1 작성 시점의 가정이 실제와 일치했다.
      */
     private static final String EMPTY_ITEMS = """
             {
@@ -168,8 +166,8 @@ class TourApiClientTest {
     /**
      * 로그를 가로채는 임시 부착물. (roadmap 6-9)
      *
-     * <p>할당량 경고는 <b>로그로만 드러나는 동작</b>이라 반환값을 확인할 수 없다.
-     * Logback의 {@code ListAppender}를 붙이면 이 클래스가 남긴 로그를 목록으로 받아 검사할 수 있다.
+     * 할당량 경고는 **로그로만 드러나는 동작**이라 반환값을 확인할 수 없다.
+     * Logback의 `ListAppender`를 붙이면 이 클래스가 남긴 로그를 목록으로 받아 검사할 수 있다.
      * 실제로 경고가 나가는지를 보는 것이 목적이므로, 값을 따로 노출하는 메서드를 만들어
      * "테스트를 위한 통로"를 여는 것보다 이 편이 정직하다.
      */

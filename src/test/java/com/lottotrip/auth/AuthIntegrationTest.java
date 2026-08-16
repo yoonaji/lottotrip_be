@@ -31,11 +31,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 인증 흐름 통합 검증. (roadmap 4-8)
  *
- * <p>지금까지의 테스트는 조각을 하나씩 봤다. 여기서는 <b>실제 서버를 띄우고 진짜 DB에 저장하며</b>
+ * 지금까지의 테스트는 조각을 하나씩 봤다. 여기서는 **실제 서버를 띄우고 진짜 DB에 저장하며**
  * HTTP 요청부터 응답까지 전 구간을 지난다. 조각별 테스트가 모두 통과해도 조립하면 안 되는 경우가 있다.
  * 예를 들어 "로그인으로 받은 토큰이 실제로 다른 API에서 통하는가"는 여기서만 확인된다.
  *
- * <p>카카오만 가짜로 바꾼다. 우리 코드 바깥이라 통제할 수 없기 때문이다. 나머지(시큐리티 필터·
+ * 카카오만 가짜로 바꾼다. 우리 코드 바깥이라 통제할 수 없기 때문이다. 나머지(시큐리티 필터·
  * 컨트롤러·서비스·JPA·PostgreSQL)는 전부 진짜다.
  */
 @SpringBootTest
@@ -84,7 +84,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     /**
      * 카카오 호출을 몇 번 기대하는지 미리 등록한다.
      *
-     * <p>가짜 서버는 <b>첫 요청이 나간 뒤에는 기대를 더 등록할 수 없다.</b> 그래서 한 테스트에서
+     * 가짜 서버는 **첫 요청이 나간 뒤에는 기대를 더 등록할 수 없다.** 그래서 한 테스트에서
      * 두 번 로그인한다면 두 번 분을 미리 걸어 둬야 한다.
      */
     private void expectKakaoCalls(int count, String responseBody) {

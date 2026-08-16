@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 /**
  * 시·군·구. (tour_api_erd.md 1 — cities)
  *
- * <p>장소는 시·군에 속하고, 시·군은 광역 지역에 속한다.
+ * 장소는 시·군에 속하고, 시·군은 광역 지역에 속한다.
  */
 @Entity
 @Table(
@@ -44,13 +44,13 @@ public class City {
     private String cityName;
 
     /**
-     * TourAPI 시군구 코드. 강원 기준 강릉시 = {@code "1"}. (roadmap 5-8, 결정 10)
+     * TourAPI 시군구 코드. 강원 기준 강릉시 = `"1"`. (roadmap 5-8, 결정 10)
      *
-     * <p>⚠️ <b>이 값만으로는 시·군을 특정할 수 없다.</b> 시군구 코드는 시·도 안에서만 유일해서,
-     * 강원의 {@code "1"}은 강릉시지만 서울의 {@code "1"}은 강남구다.
+     * ⚠️ **이 값만으로는 시·군을 특정할 수 없다.** 시군구 코드는 시·도 안에서만 유일해서,
+     * 강원의 `"1"`은 강릉시지만 서울의 `"1"`은 강남구다.
      * 항상 {@link #state}와 함께 봐야 한다 — UNIQUE 제약도 두 컬럼을 묶어 건 이유가 이것이다.
      *
-     * <p>nullable인 이유는 시드 전에도 시·군 행을 만들 수 있어야 하기 때문이다.
+     * nullable인 이유는 시드 전에도 시·군 행을 만들 수 있어야 하기 때문이다.
      * PostgreSQL의 UNIQUE는 NULL을 서로 다른 값으로 보므로, 코드가 없는 시·군이 여럿이어도 걸리지 않는다.
      */
     @Column(name = "tour_sigungu_code", length = 10)
@@ -73,9 +73,9 @@ public class City {
     }
 
     /**
-     * 시·군 이름을 갱신한다. 시드가 <b>같은 시도 안에서 코드가 같은 기존 행을 찾았을 때</b>만 쓴다.
+     * 시·군 이름을 갱신한다. 시드가 **같은 시도 안에서 코드가 같은 기존 행을 찾았을 때**만 쓴다.
      *
-     * <p>{@link State#rename(String)}과 같은 이유다. 소속 시도와 코드는 이 행이 무엇인지 정하는 값이라
+     * {@link State#rename(String)}과 같은 이유다. 소속 시도와 코드는 이 행이 무엇인지 정하는 값이라
      * 바꾸지 않는다.
      */
     public void rename(String cityName) {

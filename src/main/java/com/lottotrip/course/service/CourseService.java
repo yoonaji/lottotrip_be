@@ -31,14 +31,14 @@ import java.util.stream.Collectors;
 /**
  * 여행 코스. (roadmap 7단계, tour_api_erd.md 4-4)
  *
- * <p>슬롯로 뽑은 장소 중 마음에 드는 것을 담아 두는 곳이다.
+ * 슬롯로 뽑은 장소 중 마음에 드는 것을 담아 두는 곳이다.
  *
- * <h2>⚠️ 코스를 만드는 API가 명세에 없다</h2>
- * {@code POST /course/items}는 {@code slotId}만 받고, {@code GET /course/items}도 {@code courseId}를
- * 받지 않으며, {@code travel_courses.title}을 채울 입력이 어디에도 없다.
- * 그래서 {@code trip_sessions}(결정 1)와 같은 방식으로 <b>회원당 코스 하나를 서버가 find-or-create</b>한다.
+ * ## ⚠️ 코스를 만드는 API가 명세에 없다
+ * `POST /course/items`는 `slotId`만 받고, `GET /course/items`도 `courseId`를
+ * 받지 않으며, `travel_courses.title`을 채울 입력이 어디에도 없다.
+ * 그래서 `trip_sessions`(결정 1)와 같은 방식으로 **회원당 코스 하나를 서버가 find-or-create**한다.
  *
- * <p><b>잠정 결정이다.</b> "여행마다 코스를 따로 만든다"가 되면 코스 생성 API가 새로 필요하고
+ * **잠정 결정이다.** "여행마다 코스를 따로 만든다"가 되면 코스 생성 API가 새로 필요하고
  * 여기도 바뀐다. Entity는 어느 쪽이든 그대로 쓸 수 있게 돼 있다.
  */
 @Slf4j
@@ -49,7 +49,7 @@ public class CourseService {
     /**
      * 코스를 자동으로 만들 때 붙이는 이름.
      *
-     * <p>{@code travel_courses.title}이 NOT NULL인데 <b>사용자에게 받을 입력이 없다.</b>
+     * `travel_courses.title`이 NOT NULL인데 **사용자에게 받을 입력이 없다.**
      * 이름을 바꾸는 API가 생기기 전까지 쓰는 임시 값이다.
      */
     private static final String DEFAULT_COURSE_TITLE = "내 여행 코스";
@@ -66,11 +66,11 @@ public class CourseService {
     /**
      * 뽑은 슬롯을 코스에 담는다.
      *
-     * <pre>
+     * ```
      * 슬롯 확인(내 것인가) → 코스 확보(없으면 생성) → 순번 채번 → 저장
-     * </pre>
+     * ```
      *
-     * <p><b>장소는 요청이 아니라 슬롯에서 가져온다.</b> 프론트가 {@code placeId}를 보내게 하면
+     * **장소는 요청이 아니라 슬롯에서 가져온다.** 프론트가 `placeId`를 보내게 하면
      * 뽑지도 않은 장소를 담을 수 있다. 슬롯을 거치면 "내가 실제로 뽑은 것"만 담긴다.
      *
      * @throws CustomException 슬롯이 없거나 남의 것이면 {@link ErrorCode#RESULT_NOT_FOUND},
@@ -99,18 +99,18 @@ public class CourseService {
     /**
      * 코스에 담긴 것을 담은 순서대로 돌려준다. (roadmap 7-3)
      *
-     * <p><b>한 번도 담지 않았으면 빈 목록이다.</b> 오류가 아니다 — 아직 아무것도 안 담은 상태는
+     * **한 번도 담지 않았으면 빈 목록이다.** 오류가 아니다 — 아직 아무것도 안 담은 상태는
      * 정상이고, 프론트는 빈 목록을 그대로 그리면 된다.
      *
-     * <p><b>조회만으로 코스를 만들지 않는다.</b> 만들면 화면을 열어 보기만 한 회원에게도
+     * **조회만으로 코스를 만들지 않는다.** 만들면 화면을 열어 보기만 한 회원에게도
      * 빈 코스가 쌓인다. 코스는 처음 담을 때 생긴다.
      *
-     * <p>✅ <b>미션은 draw 때 제시한 바로 그것이다.</b> {@code course_items.slot_id}를 거쳐
-     * {@code saved_slots.mission_id}에 닿는다(roadmap 7-6). 예전에는 장소만 가리켜서
+     * ✅ **미션은 draw 때 제시한 바로 그것이다.** `course_items.slot_id`를 거쳐
+     * `saved_slots.mission_id`에 닿는다(roadmap 7-6). 예전에는 장소만 가리켜서
      * 그 장소의 미션 중 아무거나 하나를 돌려줬고, 장소에 미션이 3개까지 붙으므로
-     * <b>사용자가 본 적 없는 미션이 코스에 뜰 수 있었다.</b>
+     * **사용자가 본 적 없는 미션이 코스에 뜰 수 있었다.**
      *
-     * <p>✅ <b>완료 여부는 {@code user_missions}를 보고 판정한다</b>(roadmap 9-1-1).
+     * ✅ **완료 여부는 `user_missions`를 보고 판정한다**(roadmap 9-1-1).
      * 그 줄은 GPS 인증을 통과했을 때만 생기므로(8-1·8-2), 결국 "그 장소에 실제로 다녀왔는가"다.
      * 8단계 전에는 기록할 방법 자체가 없어 항상 false로 내보내고 있었다.
      */
@@ -136,11 +136,11 @@ public class CourseService {
     /**
      * 이 회원이 완료한 미션 번호들.
      *
-     * <p><b>항목마다 묻지 않고 한 번에 묻는다.</b> 항목이 10개면 조회가 10번 나가는데(N+1 문제),
+     * **항목마다 묻지 않고 한 번에 묻는다.** 항목이 10개면 조회가 10번 나가는데(N+1 문제),
      * 목록 조회는 자주 열리는 화면이라 그 차이가 그대로 응답 시간이 된다.
      *
-     * <p>미션이 붙지 않은 항목은 애초에 물어볼 것이 없어 제외한다. 물어볼 것이 하나도 없으면
-     * 조회 자체를 건너뛴다 — {@code IN ()}은 DB에 따라 문법 오류가 된다.
+     * 미션이 붙지 않은 항목은 애초에 물어볼 것이 없어 제외한다. 물어볼 것이 하나도 없으면
+     * 조회 자체를 건너뛴다 — `IN ()`은 DB에 따라 문법 오류가 된다.
      */
     private Set<Long> completedMissionIds(Long userId, List<CourseItem> items) {
         Set<Long> missionIds = items.stream()
@@ -158,9 +158,9 @@ public class CourseService {
     /**
      * 이 항목을 담을 때 제시했던 미션. 없으면 null이다.
      *
-     * <p><b>장소의 다른 미션으로 폴백하지 않는다.</b> 슬롯의 미션이 비었다는 것은 draw 때
-     * {@code MissionMatcher}가 하나도 확보하지 못했다는 뜻인데, 여기서 장소의 아무 미션이나
-     * 끼워 넣으면 <b>사용자가 본 적 없는 미션</b>이 코스에 나타난다.
+     * **장소의 다른 미션으로 폴백하지 않는다.** 슬롯의 미션이 비었다는 것은 draw 때
+     * `MissionMatcher`가 하나도 확보하지 못했다는 뜻인데, 여기서 장소의 아무 미션이나
+     * 끼워 넣으면 **사용자가 본 적 없는 미션**이 코스에 나타난다.
      * 미션은 곁들이는 정보라 비어 있어도 항목은 그대로 나간다.
      */
     private Mission missionOf(CourseItem item) {
@@ -170,8 +170,8 @@ public class CourseService {
     /**
      * 코스에서 항목을 뺀다. (roadmap 7-4)
      *
-     * <p><b>남은 항목의 순번을 다시 매기지 않는다.</b> 3개 중 2번을 지우면 1·3이 남는데,
-     * 순서를 재현하는 데는 이걸로 충분하고 다시 매기면 <b>남은 항목을 전부 UPDATE</b>해야 한다.
+     * **남은 항목의 순번을 다시 매기지 않는다.** 3개 중 2번을 지우면 1·3이 남는데,
+     * 순서를 재현하는 데는 이걸로 충분하고 다시 매기면 **남은 항목을 전부 UPDATE**해야 한다.
      * 새 항목은 마지막 순번 + 1로 붙으므로 번호가 겹칠 일도 없다.
      *
      * @throws CustomException 항목이 없거나 남의 것이면 {@link ErrorCode#ITEM_NOT_FOUND}
@@ -193,12 +193,12 @@ public class CourseService {
     /**
      * 이미 담긴 장소인지 본다.
      *
-     * <p><b>중복 판정 기준이 슬롯이 아니라 장소다.</b> 온디맨드 추첨이라 인기 있는 곳은 반복해서 뽑히는데,
-     * 슬롯 번호로 막으면 <b>같은 장소가 코스에 여러 줄로 쌓인다.</b>
+     * **중복 판정 기준이 슬롯이 아니라 장소다.** 온디맨드 추첨이라 인기 있는 곳은 반복해서 뽑히는데,
+     * 슬롯 번호로 막으면 **같은 장소가 코스에 여러 줄로 쌓인다.**
      *
-     * <p><b>이 검사만으로는 부족하다.</b> 같은 요청이 동시에 두 번 들어오면 둘 다 "없음"을 보고
-     * 통과한다. {@code (course_id, place_id)} UNIQUE 제약이 마지막 방어선이고,
-     * 여기서는 <b>흔한 경우를 예외 없이 걸러 주는 역할</b>을 한다.
+     * **이 검사만으로는 부족하다.** 같은 요청이 동시에 두 번 들어오면 둘 다 "없음"을 보고
+     * 통과한다. `(course_id, place_id)` UNIQUE 제약이 마지막 방어선이고,
+     * 여기서는 **흔한 경우를 예외 없이 걸러 주는 역할**을 한다.
      */
     private void requireNotAlreadyAdded(TravelCourse course, Place place) {
         if (courseItemRepository.existsByCourseIdAndPlaceId(course.getId(), place.getId())) {
@@ -210,8 +210,8 @@ public class CourseService {
     /**
      * 이 회원의 슬롯을 찾는다.
      *
-     * <p><b>남의 슬롯도 "없음"으로 답한다.</b> 403(권한 없음)으로 답하면 <b>그 번호의 슬롯이
-     * 존재한다는 사실을 알려 주는 셈</b>이라, 번호를 훑어 남이 무엇을 얼마나 뽑았는지 세어 볼 수 있다.
+     * **남의 슬롯도 "없음"으로 답한다.** 403(권한 없음)으로 답하면 **그 번호의 슬롯이
+     * 존재한다는 사실을 알려 주는 셈**이라, 번호를 훑어 남이 무엇을 얼마나 뽑았는지 세어 볼 수 있다.
      * 슬롯 결과 조회(6-7)와 같은 원칙이다.
      */
     private SavedSlot findOwnedSlot(Long userId, Long slotId) {
@@ -226,7 +226,7 @@ public class CourseService {
     /**
      * 회원의 코스를 찾고, 없으면 만든다.
      *
-     * <p>코스 생성 API가 없으므로 <b>처음 담는 순간이 곧 코스가 생기는 순간</b>이다.
+     * 코스 생성 API가 없으므로 **처음 담는 순간이 곧 코스가 생기는 순간**이다.
      * 회원가입 때 미리 만들지 않는 이유는, 한 번도 담지 않은 회원에게도 빈 코스가 쌓이기 때문이다.
      */
     private TravelCourse getOrCreateCourse(Long userId) {
@@ -249,8 +249,8 @@ public class CourseService {
     /**
      * 다음 순번. 마지막 순번 + 1이다.
      *
-     * <p>항목 수를 세지 않고 마지막 순번을 보는 이유: 중간을 지우면(7-4) 개수와 순번이 어긋난다.
-     * 3개를 담고 2번을 지우면 개수는 2인데 마지막 순번은 3이라, 개수로 채번하면 <b>3번이 두 개</b>가 된다.
+     * 항목 수를 세지 않고 마지막 순번을 보는 이유: 중간을 지우면(7-4) 개수와 순번이 어긋난다.
+     * 3개를 담고 2번을 지우면 개수는 2인데 마지막 순번은 3이라, 개수로 채번하면 **3번이 두 개**가 된다.
      */
     private int nextSequence(TravelCourse course) {
         Integer lastSequence = courseItemRepository.findMaxSequence(course.getId());

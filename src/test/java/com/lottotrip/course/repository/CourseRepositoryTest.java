@@ -24,8 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 코스 조회 검증. (tour_api_erd.md 1 — course_items, 4-4)
  *
- * <p>코스에 담을 때 두 가지를 조회해야 한다.
- * ① 이미 담긴 장소인가({@code ALREADY_ADDED}) ② 다음 순번은 몇 번인가
+ * 코스에 담을 때 두 가지를 조회해야 한다.
+ * ① 이미 담긴 장소인가(`ALREADY_ADDED`) ② 다음 순번은 몇 번인가
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

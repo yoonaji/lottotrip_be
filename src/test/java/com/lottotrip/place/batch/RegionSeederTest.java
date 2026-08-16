@@ -26,11 +26,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 지역코드 시드 검증. (roadmap 5-8, 결정 10)
  *
- * <p>TourAPI는 장소의 지역을 <b>코드로만</b> 준다. 이 시드가 코드와 이름을 미리 이어 두어야
- * 장소 적재(5-9)에서 {@code places.city_id}를 채울 수 있다.
+ * TourAPI는 장소의 지역을 **코드로만** 준다. 이 시드가 코드와 이름을 미리 이어 두어야
+ * 장소 적재(5-9)에서 `places.city_id`를 채울 수 있다.
  *
- * <p>DB는 진짜를 쓰고(중복 저장 여부는 실제 제약으로만 확인된다) 바깥 호출만 막는다.
- * {@link MockRestServiceServer}가 {@code RestClient} 안쪽에서 요청을 가로채므로 네트워크를 타지 않는다.
+ * DB는 진짜를 쓰고(중복 저장 여부는 실제 제약으로만 확인된다) 바깥 호출만 막는다.
+ * {@link MockRestServiceServer}가 `RestClient` 안쪽에서 요청을 가로채므로 네트워크를 타지 않는다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -38,7 +38,7 @@ class RegionSeederTest extends PostgresContainerSupport {
 
     private static final String GANGWON = "32";
 
-    /** 시도 목록 응답. {@code areaCode2}를 지역 코드 없이 부르면 이 모양이 온다. */
+    /** 시도 목록 응답. `areaCode2`를 지역 코드 없이 부르면 이 모양이 온다. */
     private static final String STATE_LIST = """
             {
               "response": {
@@ -56,7 +56,7 @@ class RegionSeederTest extends PostgresContainerSupport {
             }
             """;
 
-    /** 강원 시군구 목록. 지역 코드를 주면 그 시도의 시군구가 <b>같은 모양</b>으로 온다. */
+    /** 강원 시군구 목록. 지역 코드를 주면 그 시도의 시군구가 **같은 모양**으로 온다. */
     private static final String GANGWON_CITY_LIST = """
             {
               "response": {

@@ -15,17 +15,17 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * 실제 Claude API를 한 번 불러 보는 수동 확인. (roadmap 8-5)
  *
- * <p><b>평소 빌드에서는 실행되지 않는다.</b> {@code build.gradle}의 {@code test} 작업에서
- * {@code manual} 태그를 제외해 뒀다. 돌리려면:
+ * **평소 빌드에서는 실행되지 않는다.** `build.gradle`의 `test` 작업에서
+ * `manual` 태그를 제외해 뒀다. 돌리려면:
  *
- * <pre>
+ * ```
  * ANTHROPIC_API_KEY=sk-ant-... ./gradlew manualTest --tests '*ClaudeMissionClientManualTest'
- * </pre>
+ * ```
  *
- * <p><b>왜 떼어 놨는가</b> — 이 테스트는 네트워크·키·요금·모델의 그날 응답에 의존한다.
+ * **왜 떼어 놨는가** — 이 테스트는 네트워크·키·요금·모델의 그날 응답에 의존한다.
  * 평소 빌드에 섞여 있으면 우리 코드가 멀쩡한데도 빨간 불이 뜨고, 그 빨간 불이 반복되면
- * 아무도 테스트 결과를 믿지 않게 된다. 자동 검증은 {@code ClaudeMissionGeneratorTest}가 하고,
- * 여기서는 <b>"진짜로 연결되는가"</b>만 사람이 확인한다.
+ * 아무도 테스트 결과를 믿지 않게 된다. 자동 검증은 `ClaudeMissionGeneratorTest`가 하고,
+ * 여기서는 **"진짜로 연결되는가"**만 사람이 확인한다.
  */
 @Tag("manual")
 class ClaudeMissionClientManualTest {

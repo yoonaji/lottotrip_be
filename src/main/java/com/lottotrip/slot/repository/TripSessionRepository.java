@@ -11,10 +11,10 @@ public interface TripSessionRepository extends JpaRepository<TripSession, Long> 
     /**
      * 이 회원의 가장 최근 세션을 찾는다. (tour_api_erd.md 2-1)
      *
-     * <p>{@code Top}은 "제일 위 하나만", {@code OrderByCreatedAtDesc}는 "생성 시각 내림차순"이다.
+     * `Top`은 "제일 위 하나만", `OrderByCreatedAtDesc`는 "생성 시각 내림차순"이다.
      * 합치면 "가장 최근 것 하나"가 된다.
      *
-     * <p>찾은 세션이 12시간 이내인지 판단하는 것은 서비스의 몫이다(6-1).
+     * 찾은 세션이 12시간 이내인지 판단하는 것은 서비스의 몫이다(6-1).
      * 저장소는 "가장 최근 것"만 돌려준다.
      */
     Optional<TripSession> findTopByUserIdOrderByCreatedAtDesc(Long userId);

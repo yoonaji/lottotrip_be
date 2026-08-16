@@ -22,14 +22,14 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 카카오 토큰 검증 구현체 검증. (roadmap 4-4-1)
  *
- * <p>실제 카카오 서버를 부르지 않는다. {@link MockRestServiceServer}가 {@code RestClient} 내부의
+ * 실제 카카오 서버를 부르지 않는다. {@link MockRestServiceServer}가 `RestClient` 내부의
  * "요청을 실제로 보내는 부품"을 가짜로 바꿔치기하기 때문에 네트워크를 아예 타지 않는다.
  *
- * <p>이렇게 하는 이유는 <b>실패 상황을 우리가 만들어야 하기 때문</b>이다. 실제 카카오 서버에
+ * 이렇게 하는 이유는 **실패 상황을 우리가 만들어야 하기 때문**이다. 실제 카카오 서버에
  * "지금 401을 주세요", "500을 주세요"라고 요청할 방법이 없다. 명세상 검증해야 할 것은
- * 성공보다 오히려 {@code INVALID_PROVIDER_TOKEN} 쪽이다. (tour_api_erd.md 4-1)
+ * 성공보다 오히려 `INVALID_PROVIDER_TOKEN` 쪽이다. (tour_api_erd.md 4-1)
  *
- * <p>⚠️ 여기 적힌 응답 JSON은 <b>카카오 문서 기준으로 작성한 가정</b>이다. 실제 응답 모양이 다르면
+ * ⚠️ 여기 적힌 응답 JSON은 **카카오 문서 기준으로 작성한 가정**이다. 실제 응답 모양이 다르면
  * 이 테스트는 통과해도 운영에서 깨진다. 실제 토큰으로 한 번 확인하는 절차가 4-5에 따로 필요하다.
  */
 class KakaoTokenVerifierTest {

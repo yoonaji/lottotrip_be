@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 /**
  * 회원. (tour_api_erd.md 1 — users)
  *
- * <p>{@code @Entity}는 "이 클래스는 DB 테이블 한 줄에 대응한다"는 표시다.
+ * `@Entity`는 "이 클래스는 DB 테이블 한 줄에 대응한다"는 표시다.
  * 붙여 두면 JPA가 객체를 INSERT/SELECT 문으로 바꿔 준다.
  */
 @Entity
@@ -26,8 +26,8 @@ import java.time.LocalDateTime;
 public class User {
 
     /**
-     * {@code IDENTITY}는 "번호를 DB가 매긴다"는 뜻이다.
-     * ERD의 {@code BIGSERIAL}이 PostgreSQL에서 자동 증가 컬럼이므로 여기에 맞춘다.
+     * `IDENTITY`는 "번호를 DB가 매긴다"는 뜻이다.
+     * ERD의 `BIGSERIAL`이 PostgreSQL에서 자동 증가 컬럼이므로 여기에 맞춘다.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,7 +58,7 @@ public class User {
     /**
      * 회원을 새로 만든다.
      *
-     * <p>생성자를 직접 열지 않고 이름 있는 메서드를 두면 "언제 쓰는 것인지"가 드러난다.
+     * 생성자를 직접 열지 않고 이름 있는 메서드를 두면 "언제 쓰는 것인지"가 드러난다.
      * 나중에 가입 경로가 늘어나도 여기에 메서드를 하나 더 추가하면 된다.
      */
     public static User create(String email, String nickname, String profileImageUrl) {

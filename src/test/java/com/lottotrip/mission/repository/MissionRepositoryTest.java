@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 미션 조회 검증. (tour_api_erd.md 2-4 step 8, 4-5)
  *
- * <p>슬롯이 장소를 뽑으면 그 장소의 미션 중 하나를 골라야 하고,
+ * 슬롯이 장소를 뽑으면 그 장소의 미션 중 하나를 골라야 하고,
  * 완료 처리할 때는 이미 완료했는지 확인해야 한다.
  */
 @DataJpaTest

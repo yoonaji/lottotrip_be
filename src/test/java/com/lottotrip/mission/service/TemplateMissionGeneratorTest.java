@@ -13,10 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 임시 미션 생성기 검증. (roadmap 6-5)
  *
- * <p>⚠️ <b>이 구현체는 회의 결과가 나오면 교체된다.</b> 생성 방식(LLM vs 키워드·템플릿)이
+ * ⚠️ **이 구현체는 회의 결과가 나오면 교체된다.** 생성 방식(LLM vs 키워드·템플릿)이
  * 보류 상태라, 그때까지 6-6 draw가 실제로 굴러가도록 자리를 채우는 최소 구현이다.
- * 여기서 검증하는 것은 문구의 품질이 아니라 <b>계약</b>이다 — 요청한 개수를 주는가,
- * 저장할 수 있는 형태인가({@code title}·{@code reward_point}가 채워졌는가).
+ * 여기서 검증하는 것은 문구의 품질이 아니라 **계약**이다 — 요청한 개수를 주는가,
+ * 저장할 수 있는 형태인가(`title`·`reward_point`가 채워졌는가).
  */
 class TemplateMissionGeneratorTest {
 

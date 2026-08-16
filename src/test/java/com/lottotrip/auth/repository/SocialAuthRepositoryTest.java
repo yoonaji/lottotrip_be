@@ -16,7 +16,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 로그인 시 사람을 찾는 조회 검증. (tour_api_erd.md 1 — social_auth)
  *
- * <p>로그인은 이메일이 아니라 {@code provider + providerUserId}로 사람을 찾는다.
+ * 로그인은 이메일이 아니라 `provider + providerUserId`로 사람을 찾는다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

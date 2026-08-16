@@ -20,11 +20,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@code missions} / {@code user_missions} 테이블 매핑 검증.
+ * `missions` / `user_missions` 테이블 매핑 검증.
  * (tour_api_erd.md 1 — missions / user_missions)
  *
- * <p>{@code missions}는 장소마다 미리 등록해 두는 마스터 데이터이고,
- * {@code user_missions}는 회원이 실제로 수행한 기록이다. 완료 처리할 때 한 줄이 생긴다.
+ * `missions`는 장소마다 미리 등록해 두는 마스터 데이터이고,
+ * `user_missions`는 회원이 실제로 수행한 기록이다. 완료 처리할 때 한 줄이 생긴다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

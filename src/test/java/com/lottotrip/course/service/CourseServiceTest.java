@@ -39,13 +39,13 @@ import static org.assertj.core.api.Assertions.tuple;
 /**
  * 코스에 담기 검증. (roadmap 7-1·7-2, tour_api_erd.md 4-4)
  *
- * <p><b>요청은 {@code slotId}만 준다.</b> 어떤 장소인지는 서버가 {@code saved_slots}에서 찾는다.
- * 프론트가 {@code placeId}를 보내게 하면 <b>뽑지도 않은 장소를 담을 수 있다.</b>
+ * **요청은 `slotId`만 준다.** 어떤 장소인지는 서버가 `saved_slots`에서 찾는다.
+ * 프론트가 `placeId`를 보내게 하면 **뽑지도 않은 장소를 담을 수 있다.**
  *
- * <p><b>⚠️ 코스를 만드는 API가 명세에 없다.</b> {@code travel_courses.title}을 채울 입력이
- * 어디에도 없어서, {@code trip_sessions}처럼 <b>회원당 하나를 서버가 find-or-create</b>한다(잠정).
+ * **⚠️ 코스를 만드는 API가 명세에 없다.** `travel_courses.title`을 채울 입력이
+ * 어디에도 없어서, `trip_sessions`처럼 **회원당 하나를 서버가 find-or-create**한다(잠정).
  *
- * <p>DB는 진짜를 쓴다. {@code (course_id, place_id)} UNIQUE 제약이 실재해야
+ * DB는 진짜를 쓴다. `(course_id, place_id)` UNIQUE 제약이 실재해야
  * "같은 장소를 두 번 담을 수 없다"가 증명된다.
  */
 @DataJpaTest
@@ -102,9 +102,9 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     /**
-     * 이 회원이 뽑은 슬롯 하나. {@code presented}가 draw 때 제시한 미션이다.
+     * 이 회원이 뽑은 슬롯 하나. `presented`가 draw 때 제시한 미션이다.
      *
-     * <p>미션을 슬롯에 실어 두는 이유는 6-13(결정 14)과 같다 — 장소에는 미션이 여러 개라
+     * 미션을 슬롯에 실어 두는 이유는 6-13(결정 14)과 같다 — 장소에는 미션이 여러 개라
      * 나중에 "그중 어느 것을 보여 줬는지"를 장소만으로는 복원할 수 없다.
      */
     private SavedSlot slotOf(User owner, Place place, Mission presented) {

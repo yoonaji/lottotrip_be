@@ -11,7 +11,7 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
     /**
      * 장소에 등록된 미션을 모두 찾는다.
      *
-     * <p>슬롯이 장소를 뽑은 뒤 이 중 랜덤으로 하나를 고른다. (tour_api_erd.md 2-4 step 8)
+     * 슬롯이 장소를 뽑은 뒤 이 중 랜덤으로 하나를 고른다. (tour_api_erd.md 2-4 step 8)
      */
     List<Mission> findByPlaceId(Long placeId);
 

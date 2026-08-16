@@ -12,9 +12,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@code states} / {@code cities} 테이블 매핑 검증. (tour_api_erd.md 1 — states / cities)
+ * `states` / `cities` 테이블 매핑 검증. (tour_api_erd.md 1 — states / cities)
  *
- * <p>지역은 "강원도 → 강릉시"처럼 2단계로 나뉜다. 장소는 시·군에 속한다.
+ * 지역은 "강원도 → 강릉시"처럼 2단계로 나뉜다. 장소는 시·군에 속한다.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)

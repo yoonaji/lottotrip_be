@@ -14,7 +14,7 @@ public interface StateRepository extends JpaRepository<State, Integer> {
     /**
      * TourAPI 시도 코드로 찾는다. (5-8)
      *
-     * <p>장소 적재는 지역을 <b>코드로만</b> 받으므로 이름으로는 이을 수 없다.
+     * 장소 적재는 지역을 **코드로만** 받으므로 이름으로는 이을 수 없다.
      * 시드가 중복 저장을 피할 때도 이 메서드를 쓴다.
      */
     Optional<State> findByTourAreaCode(String tourAreaCode);

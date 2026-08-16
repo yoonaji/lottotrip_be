@@ -15,9 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@code places} / {@code place_media} 테이블 매핑 검증. (tour_api_erd.md 1 — places / place_media)
+ * `places` / `place_media` 테이블 매핑 검증. (tour_api_erd.md 1 — places / place_media)
  *
- * <p>좌표는 ERD의 {@code POINT} 대신 위도·경도 컬럼 두 개로 나눠 저장하기로 했다.
+ * 좌표는 ERD의 `POINT` 대신 위도·경도 컬럼 두 개로 나눠 저장하기로 했다.
  * 반경 검색에 PostGIS를 도입하지 않고, 사각형 범위 필터 + 거리 계산으로 처리하기 위함이다.
  */
 @DataJpaTest
@@ -36,8 +36,8 @@ class PlaceEntityTest extends PostgresContainerSupport {
     }
 
     /**
-     * 인자를 이름으로 넣는다. 위치로 넘기면 {@code name}·{@code description}·{@code address}·
-     * {@code contentId}·{@code contentTypeId}가 전부 String이라 순서를 바꿔도 컴파일이 통과한다.
+     * 인자를 이름으로 넣는다. 위치로 넘기면 `name`·`description`·`address`·
+     * `contentId`·`contentTypeId`가 전부 String이라 순서를 바꿔도 컴파일이 통과한다.
      */
     private Place.PlaceBuilder samplePlace(City city) {
         return Place.builder()

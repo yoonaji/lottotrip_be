@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * 이동수단과 검색 반경 검증. (tour_api_erd.md 결정 2, 2-2)
  *
- * <p>반경은 요청 파라미터가 아니라 이동수단으로부터 백엔드가 계산한다.
+ * 반경은 요청 파라미터가 아니라 이동수단으로부터 백엔드가 계산한다.
  */
 class TransportTypeTest {
 

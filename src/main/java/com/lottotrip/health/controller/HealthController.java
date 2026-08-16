@@ -16,7 +16,7 @@ import java.time.temporal.ChronoUnit;
 /**
  * 시스템 상태 확인 API. (tour_api_erd.md 4-2)
  *
- * <p>인증이 필요 없는 엔드포인트다. 로드밸런서·모니터링이 주기적으로 호출한다.
+ * 인증이 필요 없는 엔드포인트다. 로드밸런서·모니터링이 주기적으로 호출한다.
  */
 @RestController
 @RequestMapping("/api/v1/health")

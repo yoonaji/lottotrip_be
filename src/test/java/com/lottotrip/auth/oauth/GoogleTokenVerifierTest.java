@@ -30,13 +30,13 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 구글 identity token 검증 구현체 검증. (roadmap 4-4-2)
  *
- * <p>카카오와 달리 구글은 <b>사용자 정보 API를 부르지 않는다.</b> 구글이 주는 identity token은
+ * 카카오와 달리 구글은 **사용자 정보 API를 부르지 않는다.** 구글이 주는 identity token은
  * JWT라서 정보가 토큰 안에 이미 들어 있고, 서명만 확인하면 위조 여부를 알 수 있다.
  *
- * <p>대신 서명을 검증하려면 구글의 <b>공개키</b>가 필요하고, 그 공개키를 받아오는 주소가
+ * 대신 서명을 검증하려면 구글의 **공개키**가 필요하고, 그 공개키를 받아오는 주소가
  * JWKS(JSON Web Key Set)다. 이 주소만 HTTP로 부른다.
  *
- * <p>테스트에서는 <b>우리가 직접 만든 RSA 키 쌍</b>으로 토큰에 서명하고, 그 공개키를 담은 가짜 JWKS를
+ * 테스트에서는 **우리가 직접 만든 RSA 키 쌍**으로 토큰에 서명하고, 그 공개키를 담은 가짜 JWKS를
  * 돌려준다. 서명 검증 자체는 진짜 알고리즘이 그대로 돌아가므로 "서명이 틀리면 걸러내는가"를
  * 실제로 확인할 수 있다.
  */

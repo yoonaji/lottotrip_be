@@ -22,11 +22,11 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 장소 세부조회 검증. (roadmap 5-10, 결정 10)
  *
- * <p><b>이 조회가 공공데이터 API를 사용자 요청에 반응해 부르는 유일한 지점이다.</b>
+ * **이 조회가 공공데이터 API를 사용자 요청에 반응해 부르는 유일한 지점이다.**
  * 추첨은 DB로만 하기로 했으므로(결정 10), 공모전 규정(결정 7 — 오픈API 실시간 호출 필수)을
  * 만족시키는 것도 여기다.
  *
- * <p>가장 중요한 성질은 <b>바깥이 실패해도 우리 정보는 나가야 한다</b>는 것이다.
+ * 가장 중요한 성질은 **바깥이 실패해도 우리 정보는 나가야 한다**는 것이다.
  * 공공데이터포털이 멈췄다고 사용자가 뽑은 장소를 못 보면 안 된다.
  */
 class PlaceDetailServiceTest {
@@ -52,7 +52,7 @@ class PlaceDetailServiceTest {
             }
             """;
 
-    /** 결과 0건. 공공데이터포털 계열은 {@code items}가 객체가 아니라 빈 문자열로 온다. */
+    /** 결과 0건. 공공데이터포털 계열은 `items`가 객체가 아니라 빈 문자열로 온다. */
     private static final String EMPTY = """
             {
               "response": {

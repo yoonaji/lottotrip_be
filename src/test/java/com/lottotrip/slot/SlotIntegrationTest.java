@@ -36,19 +36,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 슬롯 도메인 통합 검증. (roadmap 6-8)
  *
- * <p>서비스 단위 테스트(6-1~6-7)가 각 부품의 동작을 이미 덮고 있으므로, 여기서는
- * <b>HTTP 경계에서만 드러나는 것</b>을 본다 — 인증이 실제로 걸리는가, 요청 본문 검증이 도는가,
+ * 서비스 단위 테스트(6-1~6-7)가 각 부품의 동작을 이미 덮고 있으므로, 여기서는
+ * **HTTP 경계에서만 드러나는 것**을 본다 — 인증이 실제로 걸리는가, 요청 본문 검증이 도는가,
  * 공통 응답 포맷과 에러 코드가 명세대로 나가는가.
  *
- * <p><b>바깥 호출은 나가지 않는다.</b> 두 겹으로 막는다.
- * <ul>
- *   <li><b>추첨</b> — {@code RealtimePlaceFinder}를 {@code @MockitoBean}으로 바꿔 끼운다.
+ * **바깥 호출은 나가지 않는다.** 두 겹으로 막는다.
+ *   - **추첨** — `RealtimePlaceFinder`를 `@MockitoBean`으로 바꿔 끼운다.
  *       결정 12로 draw가 공공 API를 실시간 호출하게 되어, 막지 않으면 테스트가
- *       <b>돌 때마다 일일 할당량을 깎는다.</b> 무엇이 뽑히는지는 6-11이 이미 검증했으므로
- *       여기서는 "뽑힌 것이 HTTP 응답까지 제대로 흘러가는가"만 본다</li>
- *   <li><b>세부조회</b> — 인증키를 빈 값으로 두면 {@code TourApiClient}가 네트워크를 타기 전에 멈추고
- *       {@code PlaceDetailService}가 그 실패를 삼켜 {@code liveDetailLoaded=false}로 응답한다</li>
- * </ul>
+ *       **돌 때마다 일일 할당량을 깎는다.** 무엇이 뽑히는지는 6-11이 이미 검증했으므로
+ *       여기서는 "뽑힌 것이 HTTP 응답까지 제대로 흘러가는가"만 본다
+ *   - **세부조회** — 인증키를 빈 값으로 두면 `TourApiClient`가 네트워크를 타기 전에 멈추고
+ *       `PlaceDetailService`가 그 실패를 삼켜 `liveDetailLoaded=false`로 응답한다
  */
 @SpringBootTest
 @AutoConfigureMockMvc

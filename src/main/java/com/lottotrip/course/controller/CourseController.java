@@ -32,10 +32,10 @@ public class CourseController {
     /**
      * 슬롯으로 뽑은 장소를 코스에 담는다.
      *
-     * <p>{@code @AuthenticationPrincipal}로 회원 번호를 받는다. 요청 본문으로 받지 않는 이유는
-     * 그러면 <b>남의 번호를 적어 보낼 수 있기</b> 때문이다.
+     * `@AuthenticationPrincipal`로 회원 번호를 받는다. 요청 본문으로 받지 않는 이유는
+     * 그러면 **남의 번호를 적어 보낼 수 있기** 때문이다.
      *
-     * <p><b>201을 돌려준다.</b> 이 요청은 조회가 아니라 <b>새 항목을 만드는</b> 일이라,
+     * **201을 돌려준다.** 이 요청은 조회가 아니라 **새 항목을 만드는** 일이라,
      * 명세도 201로 적혀 있다(다른 API는 대부분 200이다).
      */
     @PostMapping("/items")
@@ -48,10 +48,10 @@ public class CourseController {
     /**
      * 내 코스 조회.
      *
-     * <p><b>{@code courseId}를 받지 않는다.</b> 명세에 그런 파라미터가 없고, 코스는 회원당 하나라
+     * **`courseId`를 받지 않는다.** 명세에 그런 파라미터가 없고, 코스는 회원당 하나라
      * 토큰만으로 어느 코스인지 정해진다.
      *
-     * <p>한 번도 담지 않았으면 빈 목록이 나간다 — 404가 아니다.
+     * 한 번도 담지 않았으면 빈 목록이 나간다 — 404가 아니다.
      */
     @GetMapping("/items")
     public ApiResponse<CourseItemsResponse> getItems(@AuthenticationPrincipal Long userId) {
@@ -61,7 +61,7 @@ public class CourseController {
     /**
      * 코스에서 항목 빼기.
      *
-     * <p>남의 항목을 지우려 하면 403이 아니라 404로 답한다. 담기(7-1)·슬롯 조회(6-7)와 같은 원칙이다.
+     * 남의 항목을 지우려 하면 403이 아니라 404로 답한다. 담기(7-1)·슬롯 조회(6-7)와 같은 원칙이다.
      */
     @DeleteMapping("/items/{itemId}")
     public ApiResponse<CourseItemRemoveResponse> removeItem(@AuthenticationPrincipal Long userId,

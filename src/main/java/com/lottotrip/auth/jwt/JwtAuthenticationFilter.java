@@ -22,16 +22,16 @@ import java.util.Optional;
 /**
  * 요청 헤더의 JWT를 읽어 "이 요청은 누가 보냈는가"를 시큐리티에 알려주는 필터. (roadmap 4-2)
  *
- * <h2>필터가 무엇인가</h2>
- * <p>요청이 컨트롤러에 닿기 전에 반드시 거치는 관문이다. 모든 API가 각자
+ * ## 필터가 무엇인가
+ * 요청이 컨트롤러에 닿기 전에 반드시 거치는 관문이다. 모든 API가 각자
  * "토큰 좀 까볼게요"를 반복하지 않도록, 공통으로 한 번만 처리하는 자리다.
  *
- * <p>{@link OncePerRequestFilter}를 상속하는 이유는 이름 그대로다. 서블릿 컨테이너는
+ * {@link OncePerRequestFilter}를 상속하는 이유는 이름 그대로다. 서블릿 컨테이너는
  * 내부 forward 같은 상황에서 같은 요청에 필터를 여러 번 태울 수 있는데,
  * 이 부모 클래스가 "한 요청당 한 번"을 보장해 준다.
  *
- * <h2>토큰이 잘못됐을 때 여기서 막지 않는 이유</h2>
- * <p>이 필터는 판단만 하고 차단은 하지 않는다. 인증 정보를 등록하지 않은 채 그냥 넘기면,
+ * ## 토큰이 잘못됐을 때 여기서 막지 않는 이유
+ * 이 필터는 판단만 하고 차단은 하지 않는다. 인증 정보를 등록하지 않은 채 그냥 넘기면,
  * 뒤에 있는 시큐리티가 "이 경로는 인증이 필요한데 인증 정보가 없네" 하고 401을 낸다.
  * 역할을 이렇게 나눠 두면 인증이 필요 없는 경로(헬스 체크 등)에 낡은 토큰이 딸려 와도
  * 요청이 정상 처리된다.
@@ -55,9 +55,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     /**
-     * {@code Authorization: Bearer xxx} 형태에서 토큰만 떼어 낸다.
+     * `Authorization: Bearer xxx` 형태에서 토큰만 떼어 낸다.
      *
-     * <p>스킴 이름의 대소문자는 RFC 6750에서 구분하지 않으므로 {@code bearer}도 받아들인다.
+     * 스킴 이름의 대소문자는 RFC 6750에서 구분하지 않으므로 `bearer`도 받아들인다.
      */
     private Optional<String> resolveToken(HttpServletRequest request) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -72,11 +72,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     /**
      * 토큰이 유효하면 인증 정보를 {@link SecurityContextHolder}에 넣는다.
      *
-     * <p>SecurityContextHolder는 "지금 이 요청을 처리 중인 사람"을 담아 두는 보관함이다.
+     * SecurityContextHolder는 "지금 이 요청을 처리 중인 사람"을 담아 두는 보관함이다.
      * 스레드마다 따로 존재해서(ThreadLocal), 동시에 들어온 다른 요청과 섞이지 않는다.
-     * 컨트롤러는 나중에 {@code @AuthenticationPrincipal}로 여기 담긴 userId를 꺼내 쓴다.
+     * 컨트롤러는 나중에 `@AuthenticationPrincipal`로 여기 담긴 userId를 꺼내 쓴다.
      *
-     * <p>권한 목록을 빈 리스트로 두는 이유: 이 서비스에는 관리자·일반회원 같은 역할 구분이 없다.
+     * 권한 목록을 빈 리스트로 두는 이유: 이 서비스에는 관리자·일반회원 같은 역할 구분이 없다.
      * "로그인했는가/아닌가"만 판단하면 되므로 권한을 나눌 필요가 없다.
      */
     private void authenticate(String token, HttpServletRequest request) {

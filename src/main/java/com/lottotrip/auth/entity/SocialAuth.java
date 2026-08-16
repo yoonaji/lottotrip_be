@@ -23,8 +23,8 @@ import java.time.LocalDateTime;
 /**
  * 소셜 로그인 연동 정보. (tour_api_erd.md 1 — social_auth)
  *
- * <p>한 회원이 카카오·애플·구글을 각각 연결할 수 있으므로 회원 하나에 여러 줄이 붙는다.
- * 로그인은 이메일이 아니라 {@code provider + providerUserId}로 사람을 찾는다.
+ * 한 회원이 카카오·애플·구글을 각각 연결할 수 있으므로 회원 하나에 여러 줄이 붙는다.
+ * 로그인은 이메일이 아니라 `provider + providerUserId`로 사람을 찾는다.
  */
 @Entity
 @Table(
@@ -46,16 +46,16 @@ public class SocialAuth {
     private Long id;
 
     /**
-     * {@code LAZY}는 "회원 정보는 실제로 쓸 때 가져온다"는 뜻이다.
-     * 기본값({@code EAGER})으로 두면 소셜 계정을 읽을 때마다 회원 테이블까지 항상 함께 조회한다.
+     * `LAZY`는 "회원 정보는 실제로 쓸 때 가져온다"는 뜻이다.
+     * 기본값(`EAGER`)으로 두면 소셜 계정을 읽을 때마다 회원 테이블까지 항상 함께 조회한다.
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     /**
-     * {@code STRING}은 enum을 이름 그대로 저장한다.
-     * 기본값({@code ORDINAL})은 순서를 숫자로 저장하는데, 나중에 값을 중간에 끼워 넣으면
+     * `STRING`은 enum을 이름 그대로 저장한다.
+     * 기본값(`ORDINAL`)은 순서를 숫자로 저장하는데, 나중에 값을 중간에 끼워 넣으면
      * 이미 저장된 데이터의 의미가 통째로 뒤바뀐다.
      */
     @Enumerated(EnumType.STRING)
@@ -93,7 +93,7 @@ public class SocialAuth {
     /**
      * 이미 가입한 회원이 다시 로그인했을 때 소셜 토큰만 새 값으로 바꾼다.
      *
-     * <p>{@code setAccessToken(...)} 같은 setter를 열어 두지 않는 이유는, 아무 데서나
+     * `setAccessToken(...)` 같은 setter를 열어 두지 않는 이유는, 아무 데서나
      * 값을 바꿀 수 있게 되면 "언제 왜 바뀌었는지"를 코드에서 추적할 수 없게 되기 때문이다.
      * 바꿔야 하는 상황마다 이름 있는 메서드를 만든다.
      */

@@ -19,16 +19,14 @@ import java.util.Set;
 /**
  * 구글 identity token 검증. (roadmap 4-4-2)
  *
- * <p>카카오와 방식이 다르다. 구글이 주는 identity token은 <b>JWT</b>라서 사용자 정보가 토큰 안에
- * 이미 들어 있다. 그래서 사용자 정보 API를 부를 필요가 없고, <b>이 토큰이 진짜 구글이 발급한 것인지</b>만
+ * 카카오와 방식이 다르다. 구글이 주는 identity token은 **JWT**라서 사용자 정보가 토큰 안에
+ * 이미 들어 있다. 그래서 사용자 정보 API를 부를 필요가 없고, **이 토큰이 진짜 구글이 발급한 것인지**만
  * 확인하면 된다. 확인은 구글의 공개키로 서명을 검사하는 방식이다.
  *
- * <p>서명 검사만으로는 부족하고 세 가지를 더 본다.
- * <ul>
- *   <li>{@code iss} — 발급한 곳이 구글이 맞는가</li>
- *   <li>{@code aud} — <b>우리 앱</b>을 위해 발급된 것이 맞는가</li>
- *   <li>{@code exp} — 만료되지 않았는가 (jjwt가 자동으로 본다)</li>
- * </ul>
+ * 서명 검사만으로는 부족하고 세 가지를 더 본다.
+ *   - `iss` — 발급한 곳이 구글이 맞는가
+ *   - `aud` — **우리 앱**을 위해 발급된 것이 맞는가
+ *   - `exp` — 만료되지 않았는가 (jjwt가 자동으로 본다)
  */
 @Slf4j
 @Component
@@ -92,11 +90,11 @@ public class GoogleTokenVerifier extends SocialTokenVerifier {
     /**
      * 클라이언트 ID가 없으면 로그인을 막는다.
      *
-     * <p>설정이 없다고 {@code aud} 검사를 건너뛰면, <b>다른 구글 앱을 위해 발급된 토큰으로도
-     * 우리 서비스에 로그인할 수 있게 된다.</b> 서명은 진짜 구글 것이라 서명 검사만으로는 못 걸러낸다.
+     * 설정이 없다고 `aud` 검사를 건너뛰면, **다른 구글 앱을 위해 발급된 토큰으로도
+     * 우리 서비스에 로그인할 수 있게 된다.** 서명은 진짜 구글 것이라 서명 검사만으로는 못 걸러낸다.
      * 그래서 "검사를 못 하면 아예 받지 않는" 쪽을 택한다.
      *
-     * <p>구현체가 없는 애플이 {@code BAD_REQUEST}를 받는 것과 같은 취급이다. 실제로 둘 다
+     * 구현체가 없는 애플이 `BAD_REQUEST`를 받는 것과 같은 취급이다. 실제로 둘 다
      * "이 provider로는 지금 로그인할 수 없다"는 상태다.
      */
     private void requireConfigured() {
@@ -116,11 +114,11 @@ public class GoogleTokenVerifier extends SocialTokenVerifier {
     /**
      * 이 토큰이 우리 앱을 위해 발급된 것인지 확인한다.
      *
-     * <p>이 검사가 빠지면 이런 일이 가능하다. 공격자가 자기 앱을 하나 만들어 구글 로그인을 붙이고,
-     * 거기서 받은 <b>진짜 구글 토큰</b>을 우리 서버로 보낸다. 서명도 발급처도 진짜라 다 통과한다.
-     * 이를 막는 것이 {@code aud}다.
+     * 이 검사가 빠지면 이런 일이 가능하다. 공격자가 자기 앱을 하나 만들어 구글 로그인을 붙이고,
+     * 거기서 받은 **진짜 구글 토큰**을 우리 서버로 보낸다. 서명도 발급처도 진짜라 다 통과한다.
+     * 이를 막는 것이 `aud`다.
      *
-     * <p>{@code aud}는 값이 여러 개일 수 있어 목록으로 다룬다.
+     * `aud`는 값이 여러 개일 수 있어 목록으로 다룬다.
      */
     private void validateAudience(Claims claims) {
         Set<String> tokenAudiences = claims.getAudience();
@@ -133,7 +131,7 @@ public class GoogleTokenVerifier extends SocialTokenVerifier {
     /**
      * 구글 클레임을 서비스 공통 모양으로 옮긴다.
      *
-     * <p>{@code sub}가 구글의 사용자 식별자다. 이메일은 사용자가 바꿀 수 있어 사람을 식별하는 데
+     * `sub`가 구글의 사용자 식별자다. 이메일은 사용자가 바꿀 수 있어 사람을 식별하는 데
      * 쓰지 않는다. (tour_api_erd.md 결정 4)
      */
     private OAuthUserInfo toUserInfo(Claims claims) {

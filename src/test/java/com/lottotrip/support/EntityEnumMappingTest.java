@@ -20,15 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * enum 매핑 규약 테스트. (roadmap 3-6)
  *
- * <p>enum을 DB에 <b>이름 문자열(VARCHAR)</b>로 저장하기로 했다. 이 테스트는 그 약속이
+ * enum을 DB에 **이름 문자열(VARCHAR)**로 저장하기로 했다. 이 테스트는 그 약속이
  * 앞으로도 지켜지는지 자동으로 검사한다. 특정 Entity를 검사하는 게 아니라
- * {@code com.lottotrip} 아래의 <b>모든 Entity를 훑는다.</b> 새 Entity를 추가해도 자동으로 포함된다.
+ * `com.lottotrip` 아래의 **모든 Entity를 훑는다.** 새 Entity를 추가해도 자동으로 포함된다.
  *
- * <p>DB가 필요 없는 검사이므로 컨테이너를 띄우지 않는다.
+ * DB가 필요 없는 검사이므로 컨테이너를 띄우지 않는다.
  */
 class EntityEnumMappingTest {
 
-    /** {@code @Column(length)}를 생략했을 때 JPA가 쓰는 기본 길이. */
+    /** `@Column(length)`를 생략했을 때 JPA가 쓰는 기본 길이. */
     private static final int DEFAULT_COLUMN_LENGTH = 255;
 
     private static List<Class<?>> entityClasses() {

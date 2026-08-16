@@ -23,16 +23,14 @@ import static org.mockito.Mockito.verify;
 /**
  * Claude 미션 생성기 검증. (roadmap 8-5, 결정 17)
  *
- * <p><b>실제 Claude API를 부르지 않는다.</b> 부르면 테스트가 네트워크·키·요금·응답 내용에
+ * **실제 Claude API를 부르지 않는다.** 부르면 테스트가 네트워크·키·요금·응답 내용에
  * 통째로 의존해서, 실패했을 때 "우리 코드가 틀렸는지" "밖이 문제인지"를 구분할 수 없다.
- * 그래서 API를 부르는 부분({@link ClaudeMissionClient})을 <b>가짜(mock)</b>로 바꿔 두고,
+ * 그래서 API를 부르는 부분({@link ClaudeMissionClient})을 **가짜(mock)**로 바꿔 두고,
  * 우리가 책임지는 두 가지만 본다.
- * <ul>
- *   <li><b>응답을 미션으로 옮기는가</b> — 문구 목록이 저장 가능한 {@code Mission}이 되는가</li>
- *   <li><b>실패했을 때 템플릿으로 내려가는가</b> — 키 미설정·예외·빈 응답</li>
- * </ul>
+ *   - **응답을 미션으로 옮기는가** — 문구 목록이 저장 가능한 `Mission`이 되는가
+ *   - **실패했을 때 템플릿으로 내려가는가** — 키 미설정·예외·빈 응답
  *
- * <p>실물 호출 1회 확인은 {@code ClaudeMissionClientManualTest}에 {@code @Tag("manual")}로
+ * 실물 호출 1회 확인은 `ClaudeMissionClientManualTest`에 `@Tag("manual")`로
  * 따로 떼어 두었다. 평소 빌드에서는 실행되지 않는다.
  */
 class ClaudeMissionGeneratorTest {

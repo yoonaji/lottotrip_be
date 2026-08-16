@@ -5,8 +5,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
 
 /**
- * {@code @ConfigurationPropertiesScan} — {@code @ConfigurationProperties}가 붙은 클래스를
- * 찾아 설정값을 채워 빈으로 등록한다. 이게 없으면 {@code JwtProperties}는 그냥 평범한
+ * `@ConfigurationPropertiesScan` — `@ConfigurationProperties`가 붙은 클래스를
+ * 찾아 설정값을 채워 빈으로 등록한다. 이게 없으면 `JwtProperties`는 그냥 평범한
  * 클래스일 뿐이라 주입받을 수 없다.
  */
 @ConfigurationPropertiesScan

@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * 지역 조회 검증. (tour_api_erd.md 1 — states / cities)
  *
- * <p>5단계에서 지역 데이터를 배치로 적재할 때, 이미 있는 지역을 다시 넣지 않으려면
+ * 5단계에서 지역 데이터를 배치로 적재할 때, 이미 있는 지역을 다시 넣지 않으려면
  * 이름으로 찾을 수 있어야 한다.
  */
 @DataJpaTest

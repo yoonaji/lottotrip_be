@@ -45,25 +45,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 전체 시나리오 통합 검증. (roadmap 9-1)
  *
- * <p><b>로그인 → 슬롯 돌리기 → 코스 담기 → 미션 완료</b>를 한 번에 이어서 지난다.
+ * **로그인 → 슬롯 돌리기 → 코스 담기 → 미션 완료**를 한 번에 이어서 지난다.
  * 도메인별 통합 테스트(4-8·6-8·7-5·8-4)는 각자 자기 API만 보므로,
- * <b>도메인 사이를 건너갈 때만 드러나는 것</b>은 여기서만 확인된다.
- * <ul>
- *   <li>로그인으로 받은 <b>진짜 토큰</b>이 슬롯·코스·미션 API에서 통하는가
- *       (다른 테스트들은 {@code JwtProvider}로 토큰을 직접 만들어 쓴다)</li>
- *   <li>draw가 만든 {@code slotId}를 코스가 그대로 받아 쓰는가</li>
- *   <li>draw가 제시한 <b>그 미션</b>이 코스 조회에 다시 나오는가 (7-6 · 결정 14)</li>
- *   <li>그 미션 번호로 완료 처리가 되는가 — 즉 세 도메인이 같은 식별자를 주고받는가</li>
- * </ul>
+ * **도메인 사이를 건너갈 때만 드러나는 것**은 여기서만 확인된다.
+ *   - 로그인으로 받은 **진짜 토큰**이 슬롯·코스·미션 API에서 통하는가
+ *       (다른 테스트들은 `JwtProvider`로 토큰을 직접 만들어 쓴다)
+ *   - draw가 만든 `slotId`를 코스가 그대로 받아 쓰는가
+ *   - draw가 제시한 **그 미션**이 코스 조회에 다시 나오는가 (7-6 · 결정 14)
+ *   - 그 미션 번호로 완료 처리가 되는가 — 즉 세 도메인이 같은 식별자를 주고받는가
  *
- * <p><b>바깥 호출은 두 군데를 막는다.</b>
- * <ul>
- *   <li><b>카카오</b> — {@link StubbedSocialServerConfig}로 통로만 가짜로 바꾼다.
- *       로그인 로직 자체는 진짜가 돈다</li>
- *   <li><b>TourAPI 추첨</b> — {@code RealtimePlaceFinder}를 목으로 바꾼다.
- *       막지 않으면 테스트가 돌 때마다 일일 할당량을 깎는다</li>
- * </ul>
- * Claude(미션 문구 생성)는 {@code anthropic.api-key}를 비워 템플릿 생성기로 내려가게 한다.
+ * **바깥 호출은 두 군데를 막는다.**
+ *   - **카카오** — {@link StubbedSocialServerConfig}로 통로만 가짜로 바꾼다.
+ *       로그인 로직 자체는 진짜가 돈다
+ *   - **TourAPI 추첨** — `RealtimePlaceFinder`를 목으로 바꾼다.
+ *       막지 않으면 테스트가 돌 때마다 일일 할당량을 깎는다
+ * Claude(미션 문구 생성)는 `anthropic.api-key`를 비워 템플릿 생성기로 내려가게 한다.
  * 나머지 — 시큐리티 필터, 컨트롤러, 서비스, JPA, PostgreSQL — 는 전부 진짜다.
  */
 @SpringBootTest

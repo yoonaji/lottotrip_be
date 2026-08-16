@@ -14,9 +14,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * provider 문자열 변환 검증. (roadmap 4-5)
  *
- * <p>DB 저장값은 대문자({@code KAKAO})인데 API 명세의 요청 본문은 소문자({@code "kakao"})다.
+ * DB 저장값은 대문자(`KAKAO`)인데 API 명세의 요청 본문은 소문자(`"kakao"`)다.
  * (tour_api_erd.md 4-1) 대소문자를 무시해 받으면 양쪽을 모두 수용할 수 있다.
- * {@code TransportType.from()}과 같은 방식이다.
+ * `TransportType.from()`과 같은 방식이다.
  */
 class ProviderTypeTest {
 

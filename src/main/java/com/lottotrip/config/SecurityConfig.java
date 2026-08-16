@@ -13,7 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 /**
  * 시큐리티 설정 — 어떤 경로가 열려 있고 어떤 경로가 토큰을 요구하는지 정한다. (roadmap 4-2)
  *
- * <p>스프링 시큐리티는 요청이 컨트롤러에 닿기 전에 여러 개의 필터를 줄줄이 거치게 한다(필터 체인).
+ * 스프링 시큐리티는 요청이 컨트롤러에 닿기 전에 여러 개의 필터를 줄줄이 거치게 한다(필터 체인).
  * 이 클래스는 그 줄을 어떻게 세울지 적어 두는 곳이다.
  */
 @Configuration
