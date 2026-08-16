@@ -45,10 +45,13 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
-    // 5. API 문서화
+    // 5. AI (미션 문구 생성 — Claude API)
+    implementation 'com.anthropic:anthropic-java:2.34.0'
+
+    // 6. API 문서화
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 
-    // 6. 테스트
+    // 7. 테스트
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-webmvc-test'   // @AutoConfigureMockMvc / @WebMvcTest (Boot 4에서 별도 모듈로 분리됨)
     testImplementation 'org.springframework.boot:spring-boot-data-jpa-test' // @DataJpaTest / TestEntityManager
@@ -60,5 +63,20 @@ dependencies {
 }
 
 tasks.named('test') {
-    useJUnitPlatform()
+    // manual 태그가 붙은 테스트는 평소 빌드에서 제외한다.
+    // 실제 외부 API(Claude)를 부르는 것들이라 네트워크·키·요금에 결과가 좌우된다.
+    useJUnitPlatform {
+        excludeTags 'manual'
+    }
+}
+
+// 실물 API 확인용. 필요할 때만 직접 돌린다:
+//   ANTHROPIC_API_KEY=... ./gradlew manualTest
+tasks.register('manualTest', Test) {
+    group = 'verification'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'manual'
+    }
 }

@@ -78,6 +78,17 @@ tourapi:
   # 시드 대상 시도 코드. 강원 = 32 (결정 10 — 적재 범위는 강원 한정)
   seed-area-code: ${SEED_AREA_CODE:32}
 
+anthropic:
+  # Claude API (미션 문구 생성 — 결정 17). 모델은 가장 빠른 것을 쓴다.
+  # 이 호출이 슬롯 돌리기 응답 시간에 그대로 얹히기 때문이다.
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-haiku-4-5}
+  # 응답 길이 상한. 미션 문구 몇 줄이라 크게 잡을 이유가 없다.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:1024}
+  # 기다릴 시간(초). 넘기면 템플릿 방식으로 되돌아간다.
+  # SDK 기본값은 10분이라, 그대로 두면 슬롯 응답이 10분간 멈춰 있을 수 있다.
+  timeout-seconds: ${ANTHROPIC_TIMEOUT_SECONDS:8}
+
 jwt:
   secret: ${JWT_SECRET:}
   access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY:3600}
