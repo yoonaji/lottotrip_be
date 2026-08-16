@@ -3,17 +3,15 @@ package com.lottotrip.auth;
 import com.lottotrip.auth.entity.ProviderType;
 import com.lottotrip.auth.repository.SocialAuthRepository;
 import com.lottotrip.support.PostgresContainerSupport;
+import com.lottotrip.support.StubbedSocialServerConfig;
 import com.lottotrip.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.ExpectedCount;
@@ -21,7 +19,6 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestClient;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -43,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(AuthIntegrationTest.StubbedSocialServerConfig.class)
+@Import(StubbedSocialServerConfig.class)
 // 테스트마다 트랜잭션을 열고 끝나면 되돌린다. 앞 테스트가 만든 회원이 다음 테스트에 남지 않는다.
 @Transactional
 class AuthIntegrationTest extends PostgresContainerSupport {
@@ -51,7 +48,6 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     private static final String LOGIN_PATH = "/api/v1/auth/login";
     private static final String REFRESH_PATH = "/api/v1/auth/refresh";
     private static final String LOGOUT_PATH = "/api/v1/auth/logout";
-    private static final String KAKAO_USER_INFO_URI = "https://kapi.kakao.com/v2/user/me";
 
     private static final String KAKAO_RESPONSE = """
             {
@@ -62,41 +58,6 @@ class AuthIntegrationTest extends PostgresContainerSupport {
               }
             }
             """;
-
-    /**
-     * 카카오 서버만 가짜로 바꾸는 설정.
-     *
-     * <p>{@code RestClient.Builder}를 {@code @Primary}로 덮어써서, 진짜 {@code KakaoTokenVerifier}가
-     * 이 가짜 통로를 쓰게 만든다. 검증기 자체는 진짜 코드가 그대로 돈다.
-     *
-     * <p>둘을 한 객체 안에서 함께 만드는 이유는 <b>순서</b> 때문이다. 검증기가 builder로
-     * {@code build()}를 부르기 전에 가짜 연결이 꽂혀 있어야 한다. 따로 만들면 검증기가 먼저 생겨
-     * 진짜 카카오로 요청이 나갈 수 있다.
-     */
-    @TestConfiguration
-    static class StubbedSocialServerConfig {
-
-        static class Stub {
-            final RestClient.Builder builder = RestClient.builder();
-            final MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
-        }
-
-        @Bean
-        Stub socialServerStub() {
-            return new Stub();
-        }
-
-        @Bean
-        @Primary
-        RestClient.Builder stubbedRestClientBuilder(Stub stub) {
-            return stub.builder;
-        }
-
-        @Bean
-        MockRestServiceServer stubbedSocialServer(Stub stub) {
-            return stub.server;
-        }
-    }
 
     @Autowired
     private MockMvc mockMvc;
@@ -127,7 +88,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
      * 두 번 로그인한다면 두 번 분을 미리 걸어 둬야 한다.
      */
     private void expectKakaoCalls(int count, String responseBody) {
-        kakaoServer.expect(ExpectedCount.times(count), requestTo(KAKAO_USER_INFO_URI))
+        kakaoServer.expect(ExpectedCount.times(count), requestTo(StubbedSocialServerConfig.KAKAO_USER_INFO_URI))
                 .andRespond(withSuccess(responseBody, MediaType.APPLICATION_JSON));
     }
 
@@ -220,7 +181,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     @DisplayName("카카오가 토큰을 거절하면 401이고 회원은 생기지 않는다")
     void invalidProviderTokenCreatesNothing() throws Exception {
         long before = userRepository.count();
-        kakaoServer.expect(requestTo(KAKAO_USER_INFO_URI))
+        kakaoServer.expect(requestTo(StubbedSocialServerConfig.KAKAO_USER_INFO_URI))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
         mockMvc.perform(post(LOGIN_PATH)
@@ -235,7 +196,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("카카오 서버 장애면 503이다")
     void socialOutageReturnsServiceUnavailable() throws Exception {
-        kakaoServer.expect(requestTo(KAKAO_USER_INFO_URI))
+        kakaoServer.expect(requestTo(StubbedSocialServerConfig.KAKAO_USER_INFO_URI))
                 .andRespond(withStatus(HttpStatus.INTERNAL_SERVER_ERROR));
 
         mockMvc.perform(post(LOGIN_PATH)
