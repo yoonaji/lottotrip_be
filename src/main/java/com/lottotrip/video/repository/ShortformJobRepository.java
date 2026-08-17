@@ -7,5 +7,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ShortformJobRepository extends JpaRepository<ShortformJob, String> {
 
-    List<ShortformJob> findByStatus(JobStatus status);
+    List<ShortformJob> findByStatusOrderByCreatedAtAsc(JobStatus status);
 }

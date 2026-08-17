@@ -23,7 +23,7 @@ public class RenderJobStore {
 
     @Transactional(readOnly = true)
     public List<String> findPendingJobIds() {
-        return shortformJobRepository.findByStatus(JobStatus.PENDING).stream()
+        return shortformJobRepository.findByStatusOrderByCreatedAtAsc(JobStatus.PENDING).stream()
                 .map(ShortformJob::getJobId)
                 .toList();
     }
