@@ -5,6 +5,8 @@ import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.common.response.ApiResponse;
 import com.lottotrip.health.dto.HealthResponse;
 import com.lottotrip.health.service.HealthService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,6 +20,7 @@ import java.time.temporal.ChronoUnit;
  *
  * 인증이 필요 없는 엔드포인트다. 로드밸런서·모니터링이 주기적으로 호출한다.
  */
+@Tag(name = "시스템", description = "헬스 체크")
 @RestController
 @RequestMapping("/api/v1/health")
 @RequiredArgsConstructor
@@ -27,6 +30,7 @@ public class HealthController {
 
     private final HealthService healthService;
 
+    @Operation(summary = "헬스 체크", description = "서버와 DB 연결 상태를 확인한다. 인증 불필요. DB에 닿지 않으면 503.")
     @GetMapping
     public ApiResponse<HealthResponse> health() {
         // DB가 죽었으면 예외를 던진다. 상태 코드·응답 본문 변환은 GlobalExceptionHandler가 맡으므로
