@@ -56,7 +56,15 @@ oauth:
     jwks-uri: ${GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
     # 우리 앱의 구글 클라이언트 ID. 토큰의 aud가 이 중 하나여야 한다.
     # ⚠️ iOS 클라이언트 ID 미확보 상태다. 비어 있으면 구글 로그인은 400으로 거절된다.
+    # 여러 개면 콤마로 잇는다(iOS 앱과 웹이 서로 다른 클라이언트 ID를 쓰는 경우).
     audiences: ${GOOGLE_AUDIENCES:}
+  apple:
+    # identity token의 서명을 검증할 애플 공개키 목록.
+    jwks-uri: ${APPLE_JWKS_URI:https://appleid.apple.com/auth/keys}
+    # 우리 앱의 번들 ID(웹이면 Service ID). 토큰의 aud가 이 중 하나여야 한다.
+    # ⚠️ 번들 ID 미확보 상태다. 비어 있으면 애플 로그인은 400으로 거절된다.
+    # 팀 ID·키 ID·.p8는 필요 없다 — 그것들은 서버가 애플에 토큰을 요청할 때 쓰는 값이다.
+    audiences: ${APPLE_AUDIENCES:}
 
 tourapi:
   # 한국관광공사 TourAPI (공공데이터포털). 5단계 장소 데이터 적재에만 쓴다.
