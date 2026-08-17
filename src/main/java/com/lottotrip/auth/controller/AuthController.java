@@ -5,11 +5,14 @@ import com.lottotrip.auth.dto.LoginResponse;
 import com.lottotrip.auth.dto.LogoutResponse;
 import com.lottotrip.auth.dto.RefreshRequest;
 import com.lottotrip.auth.dto.RefreshResponse;
+import com.lottotrip.auth.dto.WithdrawResponse;
 import com.lottotrip.auth.service.AuthService;
+import com.lottotrip.auth.service.WithdrawalService;
 import com.lottotrip.common.response.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,6 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final WithdrawalService withdrawalService;
 
     /**
      * 소셜 로그인. 인증이 필요 없는 경로다 (로그인해야 토큰이 생기므로).
@@ -46,9 +50,26 @@ public class AuthController {
         return ApiResponse.success(authService.refresh(request));
     }
 
-    /**로그아웃. 인증이 필요한 유일한 인증 API. 본문은 없음.*/
+    /**로그아웃. 인증이 필요한 인증 API. 본문은 없음.*/
     @PostMapping("/logout")
     public ApiResponse<LogoutResponse> logout(@AuthenticationPrincipal Long userId) {
         return ApiResponse.success(authService.logout(userId));
+    }
+
+    /**
+     * 회원 탈퇴. 인증 필요, 본문 없음. (roadmap 9-5, 결정 20)
+     *
+     * **앱스토어 심사 요건이다** — 계정 생성을 지원하는 앱은 앱 안에서 계정 삭제를 시작할 수 있어야 한다
+     * (App Store Review Guideline 5.1.1(v)). 웹 안내나 이메일 문의로 대체할 수 없다.
+     *
+     * 회원 번호를 본문으로 받지 않고 토큰에서만 꺼내는 이유는 **남의 계정을 지우는 요청을
+     * 아예 만들 수 없게** 하기 위함이다. 되돌릴 수 없는 동작이라 더 그렇다.
+     *
+     * `DELETE`에 `/me`를 붙인 것은 "지금 이 토큰의 주인"을 뜻한다. 경로에 회원 번호가 들어가면
+     * 그 번호를 바꿔 보고 싶어지는 API가 된다.
+     */
+    @DeleteMapping("/me")
+    public ApiResponse<WithdrawResponse> withdraw(@AuthenticationPrincipal Long userId) {
+        return ApiResponse.success(withdrawalService.withdraw(userId));
     }
 }

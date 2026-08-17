@@ -6,6 +6,7 @@ import com.lottotrip.auth.dto.LogoutResponse;
 import com.lottotrip.auth.dto.RefreshRequest;
 import com.lottotrip.auth.dto.RefreshResponse;
 import com.lottotrip.auth.service.AuthService;
+import com.lottotrip.auth.service.WithdrawalService;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.common.exception.GlobalExceptionHandler;
@@ -45,11 +46,13 @@ class AuthControllerTest {
 
     private MockMvc mockMvc;
     private AuthService authService;
+    private WithdrawalService withdrawalService;
 
     @BeforeEach
     void setUp() {
         authService = mock(AuthService.class);
-        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
+        withdrawalService = mock(WithdrawalService.class);
+        mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService, withdrawalService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 // @AuthenticationPrincipal로 userId를 꺼내려면 이 해석기가 필요하다.
                 // 실제 앱에서는 시큐리티가 자동으로 끼워 주지만, 이 테스트는 컨트롤러만 띄운다.
