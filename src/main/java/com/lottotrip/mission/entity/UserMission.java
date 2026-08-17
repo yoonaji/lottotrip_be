@@ -92,4 +92,19 @@ public class UserMission {
                                                 String certifiedMediaUrl, MediaType mediaType) {
         return new UserMission(user, mission, certifiedMediaUrl, mediaType);
     }
+
+    /**
+     * 인증 매체를 지운다. 회원 탈퇴 때만 부른다. (roadmap 9-5, 결정 20)
+     *
+     * **완료 이력 자체는 남긴다.** "어떤 미션이 몇 번 완료됐는가"는 식별정보가 아니다.
+     * 다만 인증 사진은 본인이 찍히거나 집 앞 풍경이 담길 수 있어 파기 대상이다.
+     * 지금은 GPS 인증이라 대개 비어 있지만, 사진 인증이 붙으면 이 메서드가 실제로 일한다.
+     *
+     * ⚠️ **S3 등 외부 저장소의 파일은 지우지 않는다.** 여기서 지우는 것은 주소뿐이다.
+     * 파일 삭제는 그 저장소를 다루는 쪽(영상 도메인)의 몫이라 9-5에서 협의 대상으로 남겼다.
+     */
+    public void eraseCertifiedMedia() {
+        this.certifiedMediaUrl = null;
+        this.mediaType = null;
+    }
 }

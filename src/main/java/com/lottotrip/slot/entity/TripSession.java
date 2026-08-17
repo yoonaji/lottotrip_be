@@ -59,11 +59,17 @@ public class TripSession {
     @Column(nullable = false, length = 20)
     private TransportType transportation;
 
-    /** ERD의 `accommodation_coord POINT`를 위도·경도로 나눈 것. (결정 5) */
-    @Column(name = "accommodation_latitude", nullable = false)
+    /**
+     * ERD의 `accommodation_coord POINT`를 위도·경도로 나눈 것. (결정 5)
+     *
+     * ⚠️ **nullable이다. 값이 없어도 되는 것이 아니라 탈퇴 시 지워지기 때문이다** (9-5, 결정 20).
+     * 숙소 좌표는 "이 사람이 어디에 묵었는지"라 위치정보에 해당해 파기 대상이다.
+     * 세션을 만들 때는 반드시 값이 있다 — {@link #create}가 요구한다.
+     */
+    @Column(name = "accommodation_latitude")
     private Double accommodationLatitude;
 
-    @Column(name = "accommodation_longitude", nullable = false)
+    @Column(name = "accommodation_longitude")
     private Double accommodationLongitude;
 
     /** 요청으로 받지 않고 이동수단에서 계산해 넣는다. (결정 2) */
@@ -91,5 +97,19 @@ public class TripSession {
                                      Double accommodationLatitude, Double accommodationLongitude) {
         return new TripSession(user, budgetRange, transportation,
                 accommodationLatitude, accommodationLongitude);
+    }
+
+    /**
+     * 숙소 좌표를 지운다. 회원 탈퇴 때만 부른다. (roadmap 9-5, 결정 20)
+     *
+     * 세션 행 자체는 남긴다. 예산·이동수단·반경·시각은 사람을 가리키지 못하는 이용기록이라
+     * 통계로 쓸 수 있지만, **좌표는 위치정보라 남길 근거가 없다.**
+     *
+     * `0, 0`으로 덮지 않는 이유: 그것도 실제 좌표(기니만)라, 나중에 데이터를 보는 사람이
+     * 파기된 값인지 진짜 값인지 구분할 수 없다. 비워 두면 "없다"가 분명하다.
+     */
+    public void eraseAccommodationLocation() {
+        this.accommodationLatitude = null;
+        this.accommodationLongitude = null;
     }
 }

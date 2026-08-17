@@ -19,6 +19,13 @@ public interface UserMissionRepository extends JpaRepository<UserMission, Long> 
     boolean existsByUserIdAndMissionId(Long userId, Long missionId);
 
     /**
+     * 이 회원의 모든 완료 기록. **회원 탈퇴 시 인증 매체를 지우려고 훑는다.** (roadmap 9-5)
+     *
+     * 기록 자체는 남긴다 — "어떤 미션이 완료됐는가"는 식별정보가 아니다. 지우는 것은 인증 사진뿐이다.
+     */
+    List<UserMission> findAllByUserId(Long userId);
+
+    /**
      * 이 회원이 완료한 미션 번호를 한 번에 골라낸다. 코스 조회의 `completed` 판정에 쓴다.
      *
      * **왜 {@link #existsByUserIdAndMissionId}를 반복해 부르지 않는가** — 코스에 담긴 항목이
