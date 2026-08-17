@@ -26,7 +26,7 @@ class VideoRenderServiceTest {
     @Test
     void 릴스_생성_요청시_PENDING_상태의_job을_만든다() {
         RenderRequest request = new RenderRequest(
-                List.of(new ClipItem("https://s3.../clip1.mp4", 1), new ClipItem("https://s3.../clip2.mp4", 2)),
+                List.of(new ClipItem("https://s3.../clip1.mp4", 1, "산신령이 점지해 준"), new ClipItem("https://s3.../clip2.mp4", 2, null)),
                 "산신령이 점지해 준 동쪽 바다로 가거라",
                 null
         );

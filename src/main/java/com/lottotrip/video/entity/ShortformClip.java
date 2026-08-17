@@ -34,13 +34,18 @@ public class ShortformClip {
     @Column(name = "play_order", nullable = false)
     private int playOrder;
 
-    private ShortformClip(String clipUrl, int playOrder) {
+    /** 이 클립이 재생되는 동안 화면에 번인되는 짧은 자막. 없으면 자막 없이 재생. */
+    @Column(name = "caption", columnDefinition = "TEXT")
+    private String caption;
+
+    private ShortformClip(String clipUrl, int playOrder, String caption) {
         this.clipUrl = clipUrl;
         this.playOrder = playOrder;
+        this.caption = caption;
     }
 
-    public static ShortformClip of(String clipUrl, int playOrder) {
-        return new ShortformClip(clipUrl, playOrder);
+    public static ShortformClip of(String clipUrl, int playOrder, String caption) {
+        return new ShortformClip(clipUrl, playOrder, caption);
     }
 
     void assignJob(ShortformJob job) {

@@ -164,8 +164,9 @@ CREATE TABLE shortforms (
     video_url TEXT,                       -- COMPLETED 시점에 최종 S3 URL
     status job_status DEFAULT 'PENDING',
     progress INT DEFAULT 0,               -- 렌더링 진행률 (0~100)
-    tts_script TEXT NOT NULL,             -- 대사 텍스트
+    tts_script TEXT NOT NULL,             -- 대사 텍스트 (Polly 음성 내레이션용)
     narration_type VARCHAR(50) DEFAULT 'sanshilling',
+    fail_reason TEXT,                     -- FAILED 상태일 때 사유 코드 (원본 ERD에 없던 컬럼, B가 구현하며 추가)
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -173,7 +174,8 @@ CREATE TABLE shortform_clips (
     clip_id BIGSERIAL PRIMARY KEY,
     job_id VARCHAR(100) REFERENCES shortforms(job_id) ON DELETE CASCADE,
     clip_url TEXT NOT NULL,
-    play_order INT NOT NULL               -- 클립 재생 순서
+    play_order INT NOT NULL,              -- 클립 재생 순서
+    caption TEXT                          -- 클립 재생 중 화면에 번인되는 짧은 자막 (원본 ERD에 없던 컬럼, B가 구현하며 추가)
 );
 
 -- 9. 장소 기반 운명 공동체 채팅방

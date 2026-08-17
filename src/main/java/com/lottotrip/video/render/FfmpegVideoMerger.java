@@ -5,29 +5,74 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 /**
- * 로컬 ffmpeg 바이너리를 그대로 shell-out해서 클립 병합 + 내레이션 합성을 처리한다.
- * 컨테이너 이미지(Dockerfile)에 ffmpeg가 설치돼 있어야 하고, 로컬 실행 시에도 PATH에 ffmpeg가 있어야 한다.
- * 실제 ffmpeg 실행 환경에서 검증되지 않은 커맨드라 클립 포맷에 따라 플래그 조정이 필요할 수 있다.
+ * 로컬 ffmpeg 바이너리를 그대로 shell-out해서 클립별 자막 번인 + 병합 + 내레이션 합성을 처리한다.
+ * 컨테이너 이미지(Dockerfile)에 ffmpeg와 한글 폰트(fonts-noto-cjk)가 설치돼 있어야 하고,
+ * 로컬 실행 시에도 PATH에 ffmpeg + fontconfig에 한글 폰트가 잡혀 있어야 한다.
+ * 실제 ffmpeg 실행 환경에서 검증되지 않은 커맨드라 클립 포맷/자막 렌더링은 실사용 전에 반드시 직접 확인 필요.
  */
 @Component
 public class FfmpegVideoMerger implements VideoMerger {
 
     private static final Duration COMMAND_TIMEOUT = Duration.ofMinutes(5);
+    private static final String CAPTION_FONT = "Noto Sans CJK KR"; // fontconfig family name (fontfile 경로 하드코딩 대신)
 
     @Override
-    public Path merge(List<Path> clipFiles, Path narrationAudio) throws IOException, InterruptedException {
-        Path concatenated = concatenateClips(clipFiles);
+    public Path merge(List<CaptionedClip> clips, Path narrationAudio) throws IOException, InterruptedException {
+        List<Path> captionedFiles = new ArrayList<>();
         try {
-            return overlayNarration(concatenated, narrationAudio);
+            for (CaptionedClip clip : clips) {
+                captionedFiles.add(burnCaption(clip));
+            }
+            Path concatenated = concatenateClips(captionedFiles);
+            try {
+                return overlayNarration(concatenated, narrationAudio);
+            } finally {
+                Files.deleteIfExists(concatenated);
+            }
         } finally {
-            Files.deleteIfExists(concatenated);
+            for (Path file : captionedFiles) {
+                Files.deleteIfExists(file);
+            }
         }
+    }
+
+    private Path burnCaption(CaptionedClip clip) throws IOException, InterruptedException {
+        if (!StringUtils.hasText(clip.caption())) {
+            // 자막 없는 클립은 그대로 복사만 해서 이후 단계와 파일 생명주기를 동일하게 맞춘다.
+            Path copy = Files.createTempFile("captioned-", ".mp4");
+            Files.copy(clip.file(), copy, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return copy;
+        }
+
+        Path output = Files.createTempFile("captioned-", ".mp4");
+        String drawtext = "drawtext=font='%s':text='%s':fontsize=42:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=h-th-60"
+                .formatted(CAPTION_FONT, escapeForDrawtext(clip.caption()));
+
+        runFfmpeg(List.of(
+                "ffmpeg", "-y",
+                "-i", clip.file().toString(),
+                "-vf", drawtext,
+                "-c:v", "libx264", "-c:a", "copy",
+                output.toString()
+        ));
+        return output;
+    }
+
+    private String escapeForDrawtext(String text) {
+        String singleLine = text.replace("\n", " ").replace("\r", " ");
+        return singleLine
+                .replace("\\", "\\\\")
+                .replace(":", "\\:")
+                .replace("%", "\\%")
+                .replace("'", "’"); // 작은따옴표는 필터 문법과 충돌이 잦아 오른쪽 홑따옴표(’)로 치환
     }
 
     private Path concatenateClips(List<Path> clipFiles) throws IOException, InterruptedException {

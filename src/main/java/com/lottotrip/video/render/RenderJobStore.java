@@ -1,7 +1,6 @@
 package com.lottotrip.video.render;
 
 import com.lottotrip.video.entity.JobStatus;
-import com.lottotrip.video.entity.ShortformClip;
 import com.lottotrip.video.entity.ShortformJob;
 import com.lottotrip.video.repository.ShortformJobRepository;
 import java.util.List;
@@ -43,8 +42,10 @@ public class RenderJobStore {
     @Transactional(readOnly = true)
     public RenderJobSnapshot loadSnapshot(String jobId) {
         ShortformJob job = shortformJobRepository.findById(jobId).orElseThrow();
-        List<String> clipUrls = job.getClips().stream().map(ShortformClip::getClipUrl).toList();
-        return new RenderJobSnapshot(clipUrls, job.getTtsScript());
+        List<ClipRef> clips = job.getClips().stream()
+                .map(clip -> new ClipRef(clip.getClipUrl(), clip.getCaption()))
+                .toList();
+        return new RenderJobSnapshot(clips, job.getTtsScript());
     }
 
     @Transactional
@@ -62,6 +63,9 @@ public class RenderJobStore {
         shortformJobRepository.findById(jobId).ifPresent(job -> job.markFailed(reasonCode));
     }
 
-    public record RenderJobSnapshot(List<String> clipUrls, String ttsScript) {
+    public record RenderJobSnapshot(List<ClipRef> clips, String ttsScript) {
+    }
+
+    public record ClipRef(String clipUrl, String caption) {
     }
 }

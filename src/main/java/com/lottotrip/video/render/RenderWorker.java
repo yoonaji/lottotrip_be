@@ -1,6 +1,8 @@
 package com.lottotrip.video.render;
 
+import com.lottotrip.video.render.RenderJobStore.ClipRef;
 import com.lottotrip.video.render.RenderJobStore.RenderJobSnapshot;
+import com.lottotrip.video.render.VideoMerger.CaptionedClip;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -58,7 +60,7 @@ public class RenderWorker {
         RenderJobSnapshot snapshot = renderJobStore.loadSnapshot(jobId);
         List<Path> tempFiles = new ArrayList<>();
         try {
-            List<Path> clipFiles = downloadClips(snapshot.clipUrls(), tempFiles);
+            List<CaptionedClip> clipFiles = downloadClips(snapshot.clips(), tempFiles);
             renderJobStore.updateProgress(jobId, 25);
 
             Path narrationAudio = synthesizeNarration(snapshot.ttsScript(), tempFiles);
@@ -74,15 +76,15 @@ public class RenderWorker {
         }
     }
 
-    private List<Path> downloadClips(List<String> clipUrls, List<Path> tempFiles) {
+    private List<CaptionedClip> downloadClips(List<ClipRef> clips, List<Path> tempFiles) {
         try {
-            List<Path> clipFiles = new ArrayList<>();
-            for (String clipUrl : clipUrls) {
-                Path file = clipStorage.download(clipUrl);
-                clipFiles.add(file);
+            List<CaptionedClip> captionedClips = new ArrayList<>();
+            for (ClipRef clip : clips) {
+                Path file = clipStorage.download(clip.clipUrl());
                 tempFiles.add(file);
+                captionedClips.add(new CaptionedClip(file, clip.caption()));
             }
-            return clipFiles;
+            return captionedClips;
         } catch (Exception e) {
             throw new RenderStageException("CLIP_DOWNLOAD_FAILED", e);
         }
@@ -98,7 +100,7 @@ public class RenderWorker {
         }
     }
 
-    private Path mergeVideo(List<Path> clipFiles, Path narrationAudio, List<Path> tempFiles) {
+    private Path mergeVideo(List<CaptionedClip> clipFiles, Path narrationAudio, List<Path> tempFiles) {
         try {
             Path finalVideo = videoMerger.merge(clipFiles, narrationAudio);
             tempFiles.add(finalVideo);

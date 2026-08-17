@@ -30,7 +30,7 @@ public class VideoRenderService {
         String narrationType = StringUtils.hasText(request.narrationType()) ? request.narrationType() : DEFAULT_NARRATION_TYPE;
 
         ShortformJob job = ShortformJob.create(generateJobId(), userId, request.ttsScript(), narrationType);
-        request.clips().forEach(clip -> job.addClip(ShortformClip.of(clip.clipUrl(), clip.order())));
+        request.clips().forEach(clip -> job.addClip(ShortformClip.of(clip.clipUrl(), clip.order(), clip.caption())));
 
         shortformJobRepository.save(job);
 

@@ -57,14 +57,17 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 | clips | array | O | 클립 정보 배열 |
 | clips[].clipUrl | string | O | 업로드 URL 발급 응답의 `clipUrl` |
 | clips[].order | integer | O | 재생 순서 |
-| ttsScript | string | O | 더빙 대사 텍스트 |
+| clips[].caption | string | X | 이 클립이 재생되는 동안 화면에 번인되는 짧은 자막. 없으면 자막 없이 재생 |
+| ttsScript | string | O | 더빙 대사 텍스트 (음성 내레이션용, 화면 자막과는 별개) |
 | narrationType | string | X | 더빙 컨셉 (`sanshilling` 등), 기본 `sanshilling` |
+
+> **추가**: 클립별 화면 자막(`caption`) 필드 추가. `ttsScript`는 Polly로 음성 변환되는 내레이션 오디오고, `caption`은 ffmpeg `drawtext`로 영상에 직접 번인되는 텍스트라 서로 완전히 다른 트랙이다 — 둘 다 쓸 수도, 자막만 쓰고 내레이션 없이(`ttsScript`는 필수라 빈 문자열은 안 되고 최소 텍스트는 있어야 함) 쓸 수도 있음.
 
 ```json
 {
   "clips": [
-    { "clipUrl": "https://s3.../clip1.mp4", "order": 1 },
-    { "clipUrl": "https://s3.../clip2.mp4", "order": 2 }
+    { "clipUrl": "https://s3.../clip1.mp4", "order": 1, "caption": "산신령이 점지해 준" },
+    { "clipUrl": "https://s3.../clip2.mp4", "order": 2, "caption": "동쪽 바다로 가거라" }
   ],
   "ttsScript": "산신령이 점지해 준 동쪽 바다로 가거라",
   "narrationType": "sanshilling"
@@ -254,7 +257,9 @@ SEND 처리 중 실패(멤버 아님, 방 없음 등)는 브로드캐스트하�
 | code | HTTP | 설명 |
 |---|---|---|
 | VIDEO_002 | 400 | `fileCount`가 허용 범위(1~10)를 벗어남 |
-| VIDEO_003 | (job 내부, HTTP 아님) | 렌더링 실패 — `failReason`에 저장되는 실제 코드는 `RenderWorker`가 단계별로 부여: `CLIP_DOWNLOAD_FAILED`(S3에서 클립 다운로드 실패), `TTS_SYNTHESIS_FAILED`(Polly 합성 실패), `FFMPEG_MERGE_FAILED`(병합/합성 실패), `S3_UPLOAD_FAILED`(최종본 업로드 실패), `UNKNOWN_ERROR`(그 외) |
+| VIDEO_003 | (job 내부, HTTP 아님) | 렌더링 실패 — `failReason`에 저장되는 실제 코드는 `RenderWorker`가 단계별로 부여: `CLIP_DOWNLOAD_FAILED`(S3에서 클립 다운로드 실패), `TTS_SYNTHESIS_FAILED`(Polly 합성 실패), `FFMPEG_MERGE_FAILED`(클립별 자막 번인 포함 병합 실패), `S3_UPLOAD_FAILED`(최종본 업로드 실패), `UNKNOWN_ERROR`(그 외) |
+
+> **미검증 리스크**: `caption` 번인은 ffmpeg `drawtext` 필터(폰트 `Noto Sans CJK KR`, Dockerfile에 `fonts-noto-cjk` 설치)로 구현했는데, 실제 ffmpeg 환경에서 한글 자막이 정상 렌더링되는지 한 번도 확인 못 했다. 실사용 전에 실제 클립으로 한글 자막 번인이 깨지지 않는지 반드시 확인 필요 (`FFMPEG_MERGE_FAILED`가 자꾸 나면 이 부분부터 의심).
 
 `CHAT_001`(NOT_ROOM_MEMBER), `CHAT_002`(ROOM_NOT_FOUND)는 기존 정의 그대로 재사용.
 

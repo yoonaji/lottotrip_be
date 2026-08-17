@@ -14,7 +14,8 @@ public record RenderRequest(
 
     public record ClipItem(
             @NotBlank String clipUrl,
-            @NotNull Integer order
+            @NotNull Integer order,
+            String caption
     ) {
     }
 }

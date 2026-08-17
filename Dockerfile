@@ -10,7 +10,7 @@ RUN ./gradlew bootJar --no-daemon -x test
 
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg fonts-noto-cjk \
     && rm -rf /var/lib/apt/lists/*
 RUN groupadd -r spring && useradd -r -g spring spring
 USER spring

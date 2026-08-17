@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.lottotrip.video.render.RenderJobStore.ClipRef;
 import com.lottotrip.video.render.RenderJobStore.RenderJobSnapshot;
 import java.nio.file.Path;
 import java.util.List;
@@ -27,7 +28,9 @@ class RenderWorkerTest {
         when(renderJobStore.findPendingJobIds()).thenReturn(List.of(JOB_ID));
         when(renderJobStore.claim(JOB_ID)).thenReturn(true);
         when(renderJobStore.loadSnapshot(JOB_ID))
-                .thenReturn(new RenderJobSnapshot(List.of("https://bucket.s3.amazonaws.com/clips/1/a.mp4"), "대사"));
+                .thenReturn(new RenderJobSnapshot(
+                        List.of(new ClipRef("https://bucket.s3.amazonaws.com/clips/1/a.mp4", "산신령이 점지해 준")),
+                        "대사"));
     }
 
     @Test
