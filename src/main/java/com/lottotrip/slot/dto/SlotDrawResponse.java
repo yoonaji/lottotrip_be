@@ -23,9 +23,13 @@ public record SlotDrawResponse(
 ) {
 
     /**
-     * @param category    한글 표시 이름("해변"). DB에는 `BEACH`로 저장돼 있다
+     * @param category    한글 표시 이름("자연관광지"·"음식점"). DB에는 상수명(`NATURE_ATTRACTION`)으로 저장된다.
+     *                    🔄 **자체 분류(`해변`·`카페`)는 6-15에서 폐기됐다** — TourAPI `cat2` 25종을 쓴다.
+     *                    해수욕장은 `자연관광지`, 카페는 `음식점`으로 나간다
      * @param distanceKm  기준 좌표로부터의 거리. 소수 첫째 자리까지만 담는다
-     * @param thumbnailUrl 대표 이미지. **실측 채움률이 18%라 대개 null이다**
+     * @param thumbnailUrl 대표 이미지. 없으면 null.
+     *                    ⚠️ **채움률 18%는 옛 수치다** — 음식점·숙박이 섞인 표본이었고,
+     *                    여행지 3종만 보면 92%다(1,125/1,218건, 2026-08-15 실측)
      */
     public record PlaceInfo(
             Long placeId,
