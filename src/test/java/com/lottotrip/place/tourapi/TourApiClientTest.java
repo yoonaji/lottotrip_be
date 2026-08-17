@@ -92,7 +92,9 @@ class TourApiClientTest {
      *
      * 여기서 두 가지가 드러난다.
      *   - `dist` — 요청 좌표로부터의 거리(미터)를 API가 계산해 준다.
-     *   - `contenttypeid: "32"`(숙박) — 필터 없이 뽑으면 모텔이 여행지로 나온다는 증거다.
+     *   - `contenttypeid: "32"`(숙박) — 목록에 모텔이 그대로 섞여 온다는 증거다.
+     *     ⚠️ 지금은 `RealtimePlaceFinder`가 숙박을 후보에서 빼므로 추첨에는 나오지 않는다(결정 18).
+     *     여기(클라이언트)는 받은 것을 그대로 옮기는 자리라 거르지 않는다.
      */
     private static final String LOCATION_BASED_LIST = """
             {
@@ -684,7 +686,8 @@ class TourApiClientTest {
     @Test
     @DisplayName("contentTypeId를 주면 종류를 좁혀 요청한다")
     void sendsContentTypeIdWhenGiven() {
-        // 필터가 없으면 숙박·음식점이 여행지로 뽑힌다. (실측: 100건 중 음식점 71 · 숙박 17)
+        // 종류를 안 좁히면 음식점이 대부분이다. (실측: 100건 중 음식점 71 · 숙박 17)
+        // 숙박 17건은 결정 18로 추첨 단계에서 빠지지만, 음식점 쏠림은 이 파라미터로만 좁혀진다.
         mockServer.expect(requestTo(containsString("contentTypeId=12")))
                 .andRespond(withSuccess(LOCATION_BASED_LIST, MediaType.APPLICATION_JSON));
 

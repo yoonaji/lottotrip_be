@@ -265,6 +265,80 @@ class RealtimePlaceFinderTest {
         assertThat(finderPicking(0).drawOne(TourApiService.KOREAN, LAT, LNG, 30, null)).isEmpty();
     }
 
+    // ---------- 숙박 제외 (roadmap 6-16, 결정 18) ----------
+
+    @Test
+    @DisplayName("숙박(B0201)은 후보에서 뺀다 — 숙소는 사용자가 따로 입력한다")
+    void excludesLodging() {
+        // 결정 13(전 종류 포괄)의 부작용이었다. 강릉 30km 후보 880건 중 190건(22%)이 모텔·호텔이라
+        // 룰렛을 다섯 번 돌리면 한 번은 "오늘의 여행지: OO모텔"이 나왔다.
+        String lodging = listOf(2)
+                .replace("\"cat1\": \"A01\", \"cat2\": \"A0101\", \"cat3\": \"A01011200\"",
+                        "\"cat1\": \"B02\", \"cat2\": \"B0201\", \"cat3\": \"B02010100\"")
+                .replace("\"contenttypeid\": \"12\"", "\"contenttypeid\": \"32\"");
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(lodging, MediaType.APPLICATION_JSON));
+
+        // 2건 다 숙박이면 뽑을 것이 남지 않는다
+        assertThat(finderPicking(0).drawOne(TourApiService.KOREAN, LAT, LNG, 30, null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("cat2가 비어도 관광타입 32면 숙박으로 보고 뺀다")
+    void excludesLodgingByContentType() {
+        // cat2는 실측 880건 중 빈 값이 0건이었지만, 비면 조용히 통과해 버린다.
+        // 숙박은 관광타입(32)으로도 식별되므로 둘 중 하나만 맞아도 뺀다.
+        String lodging = listOf(2)
+                .replace("\"cat1\": \"A01\", \"cat2\": \"A0101\", \"cat3\": \"A01011200\"",
+                        "\"cat1\": \"\", \"cat2\": \"\", \"cat3\": \"\"")
+                .replace("\"contenttypeid\": \"12\"", "\"contenttypeid\": \"32\"");
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(lodging, MediaType.APPLICATION_JSON));
+
+        assertThat(finderPicking(0).drawOne(TourApiService.KOREAN, LAT, LNG, 30, null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("숙박이 섞여 있어도 나머지 후보는 그대로 뽑힌다")
+    void keepsNonLodgingCandidates() {
+        // 첫 항목만 숙박으로 바꾼다. 남는 것은 place-2·place-3뿐이므로
+        // 인덱스 0이 가리키는 것은 place-1이 아니라 place-2여야 한다.
+        String mixed = listOf(3).replaceFirst(
+                "\"cat1\": \"A01\", \"cat2\": \"A0101\", \"cat3\": \"A01011200\"",
+                "\"cat1\": \"B02\", \"cat2\": \"B0201\", \"cat3\": \"B02010100\"");
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(mixed, MediaType.APPLICATION_JSON));
+
+        assertThat(finderPicking(0).drawOne(TourApiService.KOREAN, LAT, LNG, 30, null))
+                .get().extracting(TourApiPlaceItem::title).isEqualTo("place-2");
+    }
+
+    @Test
+    @DisplayName("난수 범위는 숙박을 뺀 뒤의 후보 수다")
+    void boundsRandomAfterExcludingLodging() {
+        // 거른 뒤의 수로 좁히지 않으면 목록 밖을 가리켜 예외가 난다.
+        String mixed = listOf(3).replaceFirst(
+                "\"cat1\": \"A01\", \"cat2\": \"A0101\", \"cat3\": \"A01011200\"",
+                "\"cat1\": \"B02\", \"cat2\": \"B0201\", \"cat3\": \"B02010100\"");
+        mockServer.expect(requestTo(containsString("/locationBasedList2")))
+                .andRespond(withSuccess(mixed, MediaType.APPLICATION_JSON));
+
+        RealtimePlaceFinder finder = new RealtimePlaceFinder(client, () -> new RandomGenerator() {
+            @Override
+            public int nextInt(int bound) {
+                assertThat(bound).isEqualTo(2); // 3건 중 숙박 1건을 뺀 수
+                return 0;
+            }
+
+            @Override
+            public long nextLong() {
+                return 0;
+            }
+        });
+
+        assertThat(finder.drawOne(TourApiService.KOREAN, LAT, LNG, 30, null)).isPresent();
+    }
+
     @Test
     @DisplayName("후보가 없으면 난수를 아예 쓰지 않는다")
     void doesNotDrawWhenEmpty() {

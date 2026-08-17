@@ -23,7 +23,9 @@ import jakarta.validation.constraints.PositiveOrZero;
  *                      ⚠️ **추첨 필터로는 쓰지 않는다**(결정 9) — 세션에 기록만 된다
  * @param transport     `walk`(도보·택시) / `car`(자차). 대소문자는 가리지 않는다
  * @param accessible    무장애 정보가 등록된 장소만 뽑을지. 안 보내면 `false` (roadmap 6-13)
- * @param contentTypeId 관광 타입 코드(12=관광지, 39=음식점 …). **안 보내면 전 종류가 대상이다**(결정 13)
+ * @param contentTypeId 관광 타입 코드(12=관광지, 39=음식점 …). **안 보내면 전 종류가 대상이다**(결정 13).
+ *                      ⚠️ 단 **숙박은 어떤 값을 보내도 후보에서 빠진다**(결정 18) —
+ *                      `32`(숙박)를 보내면 후보가 전부 걸러져 `NO_PLACE_FOUND`가 된다
  */
 public record SlotDrawRequest(
         @NotNull Double latitude,
