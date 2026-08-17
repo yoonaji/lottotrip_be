@@ -16,6 +16,8 @@ import com.lottotrip.place.tourapi.TourApiProperties;
 import com.lottotrip.place.tourapi.TravelCategoryMapper;
 import com.lottotrip.slot.dto.SlotDrawRequest;
 import com.lottotrip.slot.dto.SlotDrawResponse;
+import com.lottotrip.slot.entity.TransportType;
+import com.lottotrip.slot.entity.TripSession;
 import com.lottotrip.slot.repository.SavedSlotRepository;
 import com.lottotrip.slot.repository.TripSessionRepository;
 import com.lottotrip.support.PostgresContainerSupport;
@@ -317,6 +319,70 @@ class SlotDrawServiceTest extends PostgresContainerSupport {
 
         assertThat(tripSessionRepository.findAll()).hasSize(1);
         assertThat(savedSlotRepository.findAll()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("세션이 있어도 요청 좌표로 뽑는다 — 여행 중 숙소를 옮기면 반영돼야 한다 (결정 21)")
+    void usesRequestCoordinatesEvenWhenSessionExists() {
+        // 예전에는 12시간 이내 세션이 있으면 그 세션의 첫 좌표로 뽑아서,
+        // 서울로 이동해 돌려도 강릉 장소가 나왔다(2026-08-15 실측으로 재현).
+        mockServer.expect(requestTo(containsString("mapY=" + CENTER_LAT)))
+                .andRespond(withSuccess(oneCandidate("강릉", "", "500.0"), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(containsString("mapY=37.5665")))
+                .andRespond(withSuccess(oneCandidate("서울", "", "800.0"), MediaType.APPLICATION_JSON));
+
+        slotService.draw(user.getId(), walkRequest());  // 세션이 강릉 좌표로 생성된다
+        slotService.draw(user.getId(), new SlotDrawRequest(37.5665, 126.9780, 50_000, "walk", null, null));
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("세션이 있어도 요청 이동수단의 반경으로 뽑는다 — 차를 빌리면 반영돼야 한다 (결정 21)")
+    void usesRequestTransportEvenWhenSessionExists() {
+        mockServer.expect(requestTo(containsString("radius=10000")))
+                .andRespond(withSuccess(oneCandidate("가까운 곳", "", "500.0"), MediaType.APPLICATION_JSON));
+        mockServer.expect(requestTo(containsString("radius=30000")))
+                .andRespond(withSuccess(oneCandidate("먼 곳", "", "25000.0"), MediaType.APPLICATION_JSON));
+
+        slotService.draw(user.getId(), walkRequest());  // 세션이 walk(10km)로 생성된다
+        slotService.draw(user.getId(),
+                new SlotDrawRequest(CENTER_LAT, CENTER_LNG, 50_000, "car", null, null));
+
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("세션 값은 갱신되지 않는다 — 그 여행의 시작 조건 기록이다 (결정 1 유지)")
+    void doesNotUpdateSessionOnReuse() {
+        expectDraw(oneCandidate("A", "", "500.0"));
+        expectDraw(oneCandidate("B", "", "800.0"));
+
+        slotService.draw(user.getId(), walkRequest());
+        slotService.draw(user.getId(), new SlotDrawRequest(37.5665, 126.9780, 50_000, "car", null, null));
+
+        // 추첨에는 새 값을 썼지만, 세션에 남는 것은 처음 시작 조건이다.
+        TripSession session = tripSessionRepository.findAll().get(0);
+        assertThat(session.getAccommodationLatitude()).isEqualTo(CENTER_LAT);
+        assertThat(session.getAccommodationLongitude()).isEqualTo(CENTER_LNG);
+        assertThat(session.getTransportation()).isEqualTo(TransportType.WALK);
+        assertThat(session.getSearchRadiusKm()).isEqualTo(TransportType.WALK.getSearchRadiusKm());
+    }
+
+    @Test
+    @DisplayName("세션이 이미 있어도 잘못된 이동수단은 400 — 조용히 통과하면 안 된다")
+    void rejectsUnknownTransportEvenWhenSessionExists() {
+        // 예전에는 세션이 있으면 TransportType.from()이 아예 호출되지 않아
+        // "bike" 같은 값이 400 없이 통과했다. 요청 값을 쓰기로 한 이상 매 요청 검증해야 한다.
+        expectDraw(oneCandidate("A", "", "500.0"));
+        slotService.draw(user.getId(), walkRequest());  // 세션 생성
+
+        assertThatThrownBy(() -> slotService.draw(
+                user.getId(), new SlotDrawRequest(CENTER_LAT, CENTER_LNG, 50_000, "bike", null, null)))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.BAD_REQUEST);
+
+        mockServer.verify();  // 두 번째 요청은 바깥을 부르지 않는다
     }
 
     @Test
