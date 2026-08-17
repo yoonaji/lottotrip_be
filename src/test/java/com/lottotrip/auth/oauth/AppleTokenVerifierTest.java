@@ -30,23 +30,17 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 애플 identity token 검증 구현체 검증. (roadmap 4-4-3)
  *
- * 방식은 구글과 같다 — 애플이 주는 identity token은 JWT라서 애플의 공개키(JWKS)로
- * 서명만 확인하면 위조 여부를 알 수 있다. 그래서 {@link JwksProvider}를 그대로 재사용한다.
+ * 방식은 구글과 같아 {@link JwksProvider}를 그대로 재사용한다. 우리가 만든 RSA 키 쌍으로
+ * 토큰에 서명하고 그 공개키를 담은 가짜 JWKS를 돌려준다 — 서명 검증은 진짜 알고리즘이 돈다.
  *
- * ## 구글과 다른 점 셋
- * 1. **이름·사진이 토큰에 없다.** 애플은 이름을 **최초 인증 응답 본문에 한 번만** 주고
- *    identity token에는 넣지 않는다. 그래서 `nickname`·`profileImageUrl`은 항상 null이다
- * 2. **이메일이 없을 수 있다.** 사용자가 "이메일 가리기"를 고르면 익명 주소가 오거나 아예 안 온다
- * 3. **`email_verified`가 문자열 `"true"`로 온다.** 우리는 읽지 않지만, 읽게 되면 주의해야 한다
- *
- * 테스트는 구글과 같은 방식이다 — **우리가 만든 RSA 키 쌍**으로 토큰에 서명하고 그 공개키를 담은
- * 가짜 JWKS를 돌려준다. 서명 검증은 진짜 알고리즘이 그대로 돌아간다.
+ * 구글과 다른 점: 이름·사진이 토큰에 없어 항상 null / `iss`가 하나뿐 /
+ * 이메일이 없거나 익명 주소일 수 있음 / `email_verified`가 문자열 `"true"`로 온다.
  */
 class AppleTokenVerifierTest {
 
     private static final String JWKS_URI = "https://appleid.apple.com/auth/keys";
     private static final String ISSUER = "https://appleid.apple.com";
-    /** 애플의 `aud`는 iOS 앱의 **번들 ID**(웹이면 Service ID)다. 구글처럼 클라이언트 ID 문자열이 아니다. */
+    /** 애플의 `aud`는 iOS 앱의 번들 ID(웹이면 Service ID)다. 구글처럼 클라이언트 ID 문자열이 아니다. */
     private static final String AUDIENCE = "com.lottotrip.app";
     private static final String KID = "apple-key-1";
 

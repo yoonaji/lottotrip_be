@@ -26,7 +26,7 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 /**
  * 실시간 후보 선정기 검증. (roadmap 6-11, 결정 12)
  *
- * **슬롯 추첨의 전부가 여기서 일어난다.** 결정 12로 배치가 없어지면서, 어떤 장소가 사용자에게
+ * 슬롯 추첨의 전부가 여기서 일어난다. 결정 12로 배치가 없어지면서, 어떤 장소가 사용자에게
  * 보이는지는 이 클래스가 어느 후보를 받아 오고 그중 무엇을 고르는가로 결정된다.
  *
  * 바깥 호출은 {@link MockRestServiceServer}로 막는다. 공공 API 상태나 일일 할당량에
@@ -54,7 +54,7 @@ class RealtimePlaceFinderTest {
     /**
      * 난수를 고정한 선정기.
      *
-     * 추첨은 난수에 기대므로 그대로 두면 **테스트가 실행할 때마다 다른 답을 낸다.**
+     * 추첨은 난수에 기대므로 그대로 두면 테스트가 실행할 때마다 다른 답을 낸다.
      * "몇 번째를 고를지"를 우리가 정해 두면 결과를 단정할 수 있다.
      */
     private RealtimePlaceFinder finderPicking(int index) {

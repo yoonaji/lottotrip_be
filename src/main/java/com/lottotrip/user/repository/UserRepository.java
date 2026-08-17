@@ -17,11 +17,10 @@ import java.util.Optional;
 public interface UserRepository extends JpaRepository<User, Long> {
 
     /**
-     * **살아 있는 회원만** 찾는다. (roadmap 9-5, 결정 20)
+     * 살아 있는 회원만 찾는다. (roadmap 9-5, 결정 20)
      *
-     * ⚠️ **`findById`를 쓰면 탈퇴한 회원이 그대로 통과한다.** 소프트 삭제라 행이 남기 때문이다.
-     * 회원을 조회하는 곳은 전부 이 메서드를 써야 한다. 조건 하나가 붙을 뿐이라
-     * 추가 조회 비용은 없다.
+     * ⚠️ `findById`는 탈퇴한 회원도 통과시킨다 — 소프트 삭제라 행이 남는다.
+     * 회원을 조회하는 곳은 전부 이 메서드를 쓴다(조건 하나라 추가 비용 없음).
      */
     Optional<User> findByIdAndDeletedAtIsNull(Long id);
 

@@ -26,7 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * 확인할 수 있다. 필터 단위 테스트는 "토큰을 읽는가"만 볼 수 있을 뿐,
  * "토큰이 없을 때 실제로 막히는가"는 알 수 없기 때문이다.
  *
- * 아직 구현되지 않은 인증 API(4-5~4-7)에 대한 검증은 **상태 코드가 401이 아님**으로 확인한다.
+ * 아직 구현되지 않은 인증 API(4-5~4-7)에 대한 검증은 상태 코드가 401이 아님으로 확인한다.
  * 경로가 열려 있으면 시큐리티를 통과해 "핸들러 없음(404)"까지 도달하기 때문이다.
  */
 @SpringBootTest
@@ -39,9 +39,9 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
     /**
      * 인증이 필요한 아무 경로. 시큐리티는 핸들러 유무와 무관하게 먼저 막는다.
      *
-     * **일부러 존재하지 않는 경로를 쓴다.** 실제 API(예전에는 `/api/v1/slot/draw`)를
+     * 일부러 존재하지 않는 경로를 쓴다. 실제 API(예전에는 `/api/v1/slot/draw`)를
      * 가리키면, 그 API가 구현되는 순간 응답이 404에서 400(본문 검증 실패)으로 바뀌어
-     * **시큐리티와 무관한 이유로 이 테스트가 깨진다.** 실제로 6-6에서 그렇게 됐다.
+     * 시큐리티와 무관한 이유로 이 테스트가 깨진다. 실제로 6-6에서 그렇게 됐다.
      * 여기서 확인하려는 것은 "인증을 통과하는가"뿐이므로 핸들러가 없는 편이 낫다.
      */
     private static final String PROTECTED_PATH = "/api/v1/__security-probe";
@@ -58,7 +58,7 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
     /**
      * 실제로 존재하는(탈퇴하지 않은) 회원의 액세스 토큰.
      *
-     * 🔄 **9-5부터 필터가 회원을 조회한다.** 탈퇴한 회원의 토큰을 끊기 위해서다.
+     * 🔄 9-5부터 필터가 회원을 조회한다. 탈퇴한 회원의 토큰을 끊기 위해서다.
      * 그래서 DB에 없는 회원 번호로 토큰을 만들면 이제 401이 된다 — 예전에는 통과했다.
      * 여기서 보려는 것은 "정상 토큰이 시큐리티를 통과하는가"이므로 회원을 실제로 만들어 쓴다.
      */

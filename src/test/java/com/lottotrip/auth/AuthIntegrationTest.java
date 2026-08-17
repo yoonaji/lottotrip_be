@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 인증 흐름 통합 검증. (roadmap 4-8)
  *
- * 지금까지의 테스트는 조각을 하나씩 봤다. 여기서는 **실제 서버를 띄우고 진짜 DB에 저장하며**
+ * 지금까지의 테스트는 조각을 하나씩 봤다. 여기서는 실제 서버를 띄우고 진짜 DB에 저장하며
  * HTTP 요청부터 응답까지 전 구간을 지난다. 조각별 테스트가 모두 통과해도 조립하면 안 되는 경우가 있다.
  * 예를 들어 "로그인으로 받은 토큰이 실제로 다른 API에서 통하는가"는 여기서만 확인된다.
  *
@@ -84,7 +84,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     /**
      * 카카오 호출을 몇 번 기대하는지 미리 등록한다.
      *
-     * 가짜 서버는 **첫 요청이 나간 뒤에는 기대를 더 등록할 수 없다.** 그래서 한 테스트에서
+     * 가짜 서버는 첫 요청이 나간 뒤에는 기대를 더 등록할 수 없다. 그래서 한 테스트에서
      * 두 번 로그인한다면 두 번 분을 미리 걸어 둬야 한다.
      */
     private void expectKakaoCalls(int count, String responseBody) {
@@ -209,7 +209,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     @Test
     @DisplayName("애플은 번들 ID 미설정이라 400이다")
     void appleIsNotConfiguredYet() throws Exception {
-        // 🔄 이유가 바뀌었다. 예전에는 **구현체가 없어서**였는데, 4-4-3에서 AppleTokenVerifier를
+        // 🔄 이유가 바뀌었다. 예전에는 구현체가 없어서였는데, 4-4-3에서 AppleTokenVerifier를
         // 만들었으므로 이제는 구글과 같은 이유다 — aud(번들 ID)를 모르면 남의 앱 토큰이 통과하므로
         // 아예 막는다. APPLE_AUDIENCES가 설정되면 이 테스트는 바뀐다.
         mockMvc.perform(post(LOGIN_PATH)

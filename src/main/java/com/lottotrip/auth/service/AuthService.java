@@ -144,7 +144,7 @@ public class AuthService {
 
     /**
      * 신규 가입 — 회원과 소셜 계정을 함께 만든다.
-     * 이름·이메일을 **반드시 이 시점에 저장.
+     * 이름·이메일을 반드시 이 시점에 저장.
      */
     private User signUp(ProviderType provider, OAuthUserInfo userInfo, String providerToken) {
         User user = userRepository.save(

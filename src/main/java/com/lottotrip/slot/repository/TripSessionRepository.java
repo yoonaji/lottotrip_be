@@ -21,7 +21,7 @@ public interface TripSessionRepository extends JpaRepository<TripSession, Long> 
     Optional<TripSession> findTopByUserIdOrderByCreatedAtDesc(Long userId);
 
     /**
-     * 이 회원의 모든 세션. **회원 탈퇴 시 숙소 좌표를 지우려고 전부 훑는다.** (roadmap 9-5)
+     * 이 회원의 모든 세션. 회원 탈퇴 시 숙소 좌표를 지우려고 전부 훑는다. (roadmap 9-5)
      *
      * 세션은 12시간마다 하나씩 생기므로 한 회원의 개수는 많아야 수백 건이다.
      * 페이징 없이 한 번에 들고 와도 무리가 없다.

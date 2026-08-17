@@ -32,11 +32,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * 회원 탈퇴 통합 검증. (roadmap 9-5, 결정 20)
  *
- * **여기서만 확인되는 것이 있다.** 서비스 단위 테스트는 "무엇을 지우는가"를 보지만,
- * 진짜로 중요한 질문은 **"탈퇴한 사람이 정말 못 들어오는가"**다. 소프트 삭제는 회원 행이 남기 때문에
- * 조회 조건을 한 곳이라도 빠뜨리면 **탈퇴자가 그대로 API를 쓴다.** 그건 전 구간을 지나야 드러난다.
- *
- * 앱스토어 심사(5.1.1(v))가 요구하는 것도 "삭제 버튼이 있다"가 아니라 계정이 실제로 삭제되는 것이다.
+ * 여기서만 확인되는 것: "탈퇴한 사람이 정말 못 들어오는가". 소프트 삭제는 회원 행이 남아서
+ * 조회 조건을 한 곳이라도 빠뜨리면 탈퇴자가 그대로 API를 쓴다 — 전 구간을 지나야 드러난다.
  *
  * 카카오만 가짜다. 나머지(시큐리티 필터·컨트롤러·서비스·JPA·PostgreSQL)는 전부 진짜다.
  */
@@ -168,7 +165,7 @@ class WithdrawalIntegrationTest extends PostgresContainerSupport {
         withdraw(token);
 
         // 토큰 자체는 아직 유효하다(우리 JWT는 저장하지 않아 즉시 무효화가 안 된다).
-        // 그래서 **회원을 조회하는 지점**이 탈퇴자를 걸러야 한다.
+        // 그래서 회원을 조회하는 지점이 탈퇴자를 걸러야 한다.
         mockMvc.perform(get(COURSE_ITEMS_PATH).header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("COMMON_401"));

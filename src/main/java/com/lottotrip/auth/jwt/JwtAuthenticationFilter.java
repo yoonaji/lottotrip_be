@@ -79,16 +79,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Long userId = jwtProvider.getUserIdFromAccessToken(token);
 
             // 탈퇴한 회원의 토큰을 여기서 끊는다. (roadmap 9-5, 결정 20)
-            //
-            // 탈퇴는 소프트 삭제라 회원 행이 남고, 우리 JWT는 저장하지 않아 발급된 토큰을
-            // 즉시 무효화할 수 없다. 그래서 "탈퇴 후 최대 1시간" 동안 그 토큰이 살아 있다.
-            //
-            // ⚠️ 처음에는 서비스마다 회원을 조회할 때 거르기로 했는데(9-5 설계 초안),
-            // **회원을 조회하지 않는 읽기 경로가 있었다.** 코스 조회가 그렇다 — 목록만 돌려주므로
-            // 탈퇴자가 자기 옛 코스를 계속 읽을 수 있었고, 통합 테스트가 이를 잡아냈다.
-            // 검사를 한 곳에 두면 새 API가 생겨도 자동으로 막힌다.
-            //
-            // 비용은 요청당 기본키 조회 한 번이다. 인증이 필요한 요청은 대부분 어차피 DB를 건드린다.
+            // 탈퇴는 소프트 삭제라 행이 남고, 우리 JWT는 저장하지 않아 즉시 무효화할 수 없다.
+            // ⚠️ 서비스마다 거르는 방식은 코스 조회에서 뚫렸다 — 회원을 조회하지 않는 경로라
+            //    탈퇴자가 옛 코스를 계속 읽었다. 인증 지점 한 곳에서 막으면 새 API도 자동 적용된다.
+            //    비용은 요청당 기본키 조회 한 번.
             if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
                 log.debug("탈퇴한 회원의 요청 ({} {}): userId={}",
                         request.getMethod(), request.getRequestURI(), userId);

@@ -19,7 +19,7 @@ public interface UserMissionRepository extends JpaRepository<UserMission, Long> 
     boolean existsByUserIdAndMissionId(Long userId, Long missionId);
 
     /**
-     * 이 회원의 모든 완료 기록. **회원 탈퇴 시 인증 매체를 지우려고 훑는다.** (roadmap 9-5)
+     * 이 회원의 모든 완료 기록. 회원 탈퇴 시 인증 매체를 지우려고 훑는다. (roadmap 9-5)
      *
      * 기록 자체는 남긴다 — "어떤 미션이 완료됐는가"는 식별정보가 아니다. 지우는 것은 인증 사진뿐이다.
      */
@@ -28,12 +28,12 @@ public interface UserMissionRepository extends JpaRepository<UserMission, Long> 
     /**
      * 이 회원이 완료한 미션 번호를 한 번에 골라낸다. 코스 조회의 `completed` 판정에 쓴다.
      *
-     * **왜 {@link #existsByUserIdAndMissionId}를 반복해 부르지 않는가** — 코스에 담긴 항목이
+     * 왜 {@link #existsByUserIdAndMissionId}를 반복해 부르지 않는가 — 코스에 담긴 항목이
      * 10개면 조회가 10번 나간다(N+1 문제). 목록 조회 1번 + 항목마다 1번씩이라는 뜻이다.
-     * 번호를 한꺼번에 넘겨 **한 번만** 묻고, 돌아온 목록에 들어 있는지로 판정한다.
+     * 번호를 한꺼번에 넘겨 한 번만 묻고, 돌아온 목록에 들어 있는지로 판정한다.
      *
      * 메서드 이름만으로는 "미션 번호만 골라 달라"를 표현할 수 없어 `@Query`로 직접 적었다.
-     * `select um.mission.id`는 **필요한 컬럼 하나만** 읽어 온다는 뜻이다 —
+     * `select um.mission.id`는 필요한 컬럼 하나만 읽어 온다는 뜻이다 —
      * 기록 전체를 Entity로 불러올 이유가 없다.
      *
      * ⚠️ `missionIds`가 비면 `IN ()`이 되어 DB에 따라 문법 오류가 난다.
