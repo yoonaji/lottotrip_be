@@ -207,9 +207,11 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("애플은 구현체가 없어 400이다")
-    void appleIsNotAvailableYet() throws Exception {
-        // 개발자 계정 미보유로 보류 중이다. (roadmap 4-4-3) 500이 아니라 400으로 거절돼야 한다.
+    @DisplayName("애플은 번들 ID 미설정이라 400이다")
+    void appleIsNotConfiguredYet() throws Exception {
+        // 🔄 이유가 바뀌었다. 예전에는 **구현체가 없어서**였는데, 4-4-3에서 AppleTokenVerifier를
+        // 만들었으므로 이제는 구글과 같은 이유다 — aud(번들 ID)를 모르면 남의 앱 토큰이 통과하므로
+        // 아예 막는다. APPLE_AUDIENCES가 설정되면 이 테스트는 바뀐다.
         mockMvc.perform(post(LOGIN_PATH)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginBody("apple")))
