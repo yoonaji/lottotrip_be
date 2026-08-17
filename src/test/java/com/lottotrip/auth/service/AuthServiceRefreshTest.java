@@ -46,7 +46,8 @@ class AuthServiceRefreshTest {
         jwtProvider = new JwtProvider(new JwtProperties(
                 "test-only-secret-key-for-auth-service-32bytes-over", 3600L, 1_209_600L));
         authService = new AuthService(List.of(), userRepository, mock(SocialAuthRepository.class), jwtProvider);
-        given(userRepository.existsById(any())).willReturn(true);
+        // 🔄 9-5부터 탈퇴자까지 거르는 조회를 쓴다. existsById로는 탈퇴한 회원이 통과한다.
+        given(userRepository.existsByIdAndDeletedAtIsNull(any())).willReturn(true);
     }
 
     private String validRefreshToken() {
@@ -130,7 +131,7 @@ class AuthServiceRefreshTest {
     void rejectsWhenUserGone() {
         // 서명만 보고 발급하면, 사라진 회원의 토큰으로 계속 새 액세스 토큰이 나온다.
         // 저장하지 않는(stateless) 구조라 토큰 자체를 무효화할 수 없으므로 여기서 회원 존재를 확인한다.
-        given(userRepository.existsById(USER_ID)).willReturn(false);
+        given(userRepository.existsByIdAndDeletedAtIsNull(USER_ID)).willReturn(false);
 
         assertThatThrownBy(() -> authService.refresh(new RefreshRequest(validRefreshToken())))
                 .isInstanceOf(CustomException.class)

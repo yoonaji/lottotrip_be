@@ -82,9 +82,12 @@ public class MissionService {
                 });
     }
 
-    /**유저 조회*/
+    /**
+     * 유저 조회.
+     * ⚠️ 탈퇴는 소프트 삭제라 `findById`로는 탈퇴자가 통과한다(9-5). 조회 조건으로 거른다.
+     */
     private User findUser(Long userId) {
-        return userRepository.findById(userId)
+        return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> {
                     log.debug("존재하지 않는 회원의 미션 완료 요청: userId={}", userId);
                     return new CustomException(ErrorCode.UNAUTHORIZED);

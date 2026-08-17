@@ -127,7 +127,8 @@ public class AuthService {
 
         // 토큰이 진짜여도 그 회원이 아직 있는지는 별개다. 탈퇴한 회원의 토큰으로 계속 새
         // 액세스 토큰이 나오면 안 된다. 저장하지 않는 구조라 토큰 자체를 막을 수 없으므로 여기서 본다.
-        if (!userRepository.existsById(userId)) {
+        // ⚠️ existsById가 아니라 DeletedAtIsNull이어야 한다 — 탈퇴는 소프트 삭제라 행이 남는다(9-5).
+        if (!userRepository.existsByIdAndDeletedAtIsNull(userId)) {
             log.debug("존재하지 않는 회원의 갱신 요청: userId={}", userId);
             throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }

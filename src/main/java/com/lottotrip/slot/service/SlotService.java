@@ -148,7 +148,8 @@ public class SlotService {
 
         // 토큰이 유효해도 그 회원이 아직 있는지는 별개다(탈퇴). 없는 회원으로 세션을 만들면
         // user_id FK가 가리킬 곳이 없어 저장 시점에 터진다. 여기서 인증 문제로 돌려준다.
-        User user = userRepository.findById(userId)
+        // ⚠️ 탈퇴는 소프트 삭제라 findById로는 탈퇴자가 통과한다(9-5).
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> {
                     log.debug("존재하지 않는 회원의 슬롯 요청: userId={}", userId);
                     return new CustomException(ErrorCode.UNAUTHORIZED);

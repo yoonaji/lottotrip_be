@@ -6,10 +6,13 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import com.lottotrip.user.entity.User;
+import com.lottotrip.user.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -28,6 +31,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+// 9-5부터 이 테스트가 회원을 실제로 저장한다(필터가 회원을 조회하므로). 트랜잭션을 열고 끝나면
+// 되돌려, 컨테이너 DB를 공유하는 다른 테스트에 회원이 남지 않게 한다.
+@Transactional
 class SecurityConfigIntegrationTest extends PostgresContainerSupport {
 
     /**
@@ -45,6 +51,21 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
 
     @Autowired
     private JwtProvider jwtProvider;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    /**
+     * 실제로 존재하는(탈퇴하지 않은) 회원의 액세스 토큰.
+     *
+     * 🔄 **9-5부터 필터가 회원을 조회한다.** 탈퇴한 회원의 토큰을 끊기 위해서다.
+     * 그래서 DB에 없는 회원 번호로 토큰을 만들면 이제 401이 된다 — 예전에는 통과했다.
+     * 여기서 보려는 것은 "정상 토큰이 시큐리티를 통과하는가"이므로 회원을 실제로 만들어 쓴다.
+     */
+    private String accessTokenOfRealUser() {
+        User user = userRepository.save(User.create("probe@example.com", "탐침", null));
+        return jwtProvider.createAccessToken(user.getId());
+    }
 
     // ---------- 열린 경로 ----------
 
@@ -114,7 +135,7 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
     void allowsRequestWithValidAccessToken() throws Exception {
         // 401이 아니라 404라는 것은 "인증은 통과했는데 그런 API가 아직 없다"는 뜻이다.
         mockMvc.perform(post(PROTECTED_PATH)
-                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(1L)))
+                        .header("Authorization", "Bearer " + accessTokenOfRealUser()))
                 .andExpect(status().isNotFound());
     }
 
@@ -126,7 +147,7 @@ class SecurityConfigIntegrationTest extends PostgresContainerSupport {
         // JWT는 토큰 자체에 사용자 정보가 들어 있어 서버가 로그인 상태를 기억할 필요가 없다.
         // 세션을 만들면 서버를 여러 대로 늘릴 때 "어느 서버가 그 세션을 갖고 있는가" 문제가 생긴다.
         mockMvc.perform(post(PROTECTED_PATH)
-                        .header("Authorization", "Bearer " + jwtProvider.createAccessToken(1L)))
+                        .header("Authorization", "Bearer " + accessTokenOfRealUser()))
                 .andExpect(result -> {
                     if (result.getRequest().getSession(false) != null) {
                         throw new AssertionError("HTTP 세션이 생성되었다. 무상태(stateless) 설정을 확인하라.");

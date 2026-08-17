@@ -1,7 +1,9 @@
 package com.lottotrip.auth.jwt;
 
+import com.lottotrip.user.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,7 +15,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -33,7 +39,21 @@ class JwtAuthenticationFilterTest {
 
     private final JwtProvider jwtProvider =
             new JwtProvider(new JwtProperties(SECRET, 3600L, 1_209_600L));
-    private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwtProvider);
+
+    /**
+     * 회원 저장소는 가짜다. 기본 동작은 "살아 있는 회원"이다.
+     *
+     * 필터가 저장소를 보게 된 이유는 **탈퇴한 회원의 토큰을 끊기 위해서**다(9-5, 결정 20).
+     * 토큰을 저장하지 않는 구조라 발급된 토큰 자체는 만료 전까지 유효하기 때문이다.
+     */
+    private final UserRepository userRepository = mock(UserRepository.class);
+    private final JwtAuthenticationFilter filter =
+            new JwtAuthenticationFilter(jwtProvider, userRepository);
+
+    @BeforeEach
+    void activeUserByDefault() {
+        given(userRepository.existsByIdAndDeletedAtIsNull(anyLong())).willReturn(true);
+    }
 
     @AfterEach
     void clearContext() {
@@ -139,6 +159,33 @@ class JwtAuthenticationFilterTest {
         filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain());
 
         assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+    }
+
+    // ---------- 탈퇴한 회원 (roadmap 9-5, 결정 20) ----------
+
+    @Test
+    @DisplayName("탈퇴한 회원의 토큰이면 인증하지 않는다 — 토큰 자체는 아직 유효하다")
+    void doesNotAuthenticateWithdrawnUser() {
+        // 탈퇴는 소프트 삭제라 회원 행이 남고, 우리 JWT는 저장하지 않아 발급된 토큰을
+        // 즉시 무효화할 수 없다. 그래서 "서명은 멀쩡한데 주인이 탈퇴한" 토큰이 존재한다.
+        given(userRepository.existsByIdAndDeletedAtIsNull(7L)).willReturn(false);
+        MockHttpServletRequest request = requestWithHeader("Bearer " + jwtProvider.createAccessToken(7L));
+
+        assertThatCode(() ->
+                filter.doFilter(request, new MockHttpServletResponse(), new MockFilterChain()))
+                .doesNotThrowAnyException();
+
+        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNull();
+    }
+
+    @Test
+    @DisplayName("토큰이 잘못됐으면 회원을 조회하지도 않는다")
+    void doesNotQueryUserWhenTokenIsInvalid() throws Exception {
+        // 서명이 깨진 토큰 때문에 DB를 두드릴 이유가 없다.
+        filter.doFilter(requestWithHeader("Bearer not-a-jwt"),
+                new MockHttpServletResponse(), new MockFilterChain());
+
+        verify(userRepository, never()).existsByIdAndDeletedAtIsNull(anyLong());
     }
 
     private MockHttpServletRequest requestWithHeader(String authorization) {
