@@ -46,6 +46,57 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 
+oauth:
+  kakao:
+    # 액세스 토큰으로 사용자 정보를 조회하는 카카오 API.
+    # 조회가 성공하면 토큰이 유효한 것이고, 401이면 유효하지 않은 것이다.
+    user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+  google:
+    # identity token의 서명을 검증할 구글 공개키 목록.
+    jwks-uri: ${GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
+    # 우리 앱의 구글 클라이언트 ID. 토큰의 aud가 이 중 하나여야 한다.
+    # ⚠️ iOS 클라이언트 ID 미확보 상태다. 비어 있으면 구글 로그인은 400으로 거절된다.
+    # 여러 개면 콤마로 잇는다(iOS 앱과 웹이 서로 다른 클라이언트 ID를 쓰는 경우).
+    audiences: ${GOOGLE_AUDIENCES:}
+  apple:
+    # identity token의 서명을 검증할 애플 공개키 목록.
+    jwks-uri: ${APPLE_JWKS_URI:https://appleid.apple.com/auth/keys}
+    # 우리 앱의 번들 ID(웹이면 Service ID). 토큰의 aud가 이 중 하나여야 한다.
+    # ⚠️ 번들 ID 미확보 상태다. 비어 있으면 애플 로그인은 400으로 거절된다.
+    # 팀 ID·키 ID·.p8는 필요 없다 — 그것들은 서버가 애플에 토큰을 요청할 때 쓰는 값이다.
+    audiences: ${APPLE_AUDIENCES:}
+
+tourapi:
+  # 한국관광공사 TourAPI (공공데이터포털). 5단계 장소 데이터 적재에만 쓴다.
+  base-url: ${TOUR_API_BASE_URL:https://apis.data.go.kr/B551011/KorService2}
+  # 무장애 여행 정보. 인증키·파라미터는 위와 같고 호스트만 다르다.
+  # 여기 담긴 장소는 위 서비스의 부분집합이라, 이쪽으로 조회하는 것 자체가 "무장애 등록분만" 필터가 된다.
+  with-base-url: ${TOUR_API_WITH_BASE_URL:https://apis.data.go.kr/B551011/KorWithService2}
+  # ⚠️ 포털의 "일반 인증키(Decoding)" 값을 넣는다. 인코딩 값을 넣으면 이중 인코딩되어 인증에 실패한다.
+  #    비어 있으면 수집 기능만 꺼지고, 서버 기동과 나머지 API에는 영향이 없다.
+  service-key: ${TOUR_API_SERVICE_KEY:}
+  mobile-os: ETC
+  mobile-app: lottotrip
+  # 한 번에 받아올 건수. 크게 잡을수록 호출 횟수가 줄지만 응답이 무거워진다.
+  num-of-rows: ${TOUR_API_NUM_OF_ROWS:100}
+  # 기동할 때 지역·장소 시드를 돌릴지. 기본은 끔.
+  # 적재는 공공 API를 수백~수천 번 부르므로, 켜 두면 서버를 띄울 때마다 할당량이 깎인다.
+  # 돌릴 때만 켠다:  SEED_ON_STARTUP=true ./gradlew bootRun
+  seed-on-startup: ${SEED_ON_STARTUP:false}
+  # 시드 대상 시도 코드. 강원 = 32 (결정 10 — 적재 범위는 강원 한정)
+  seed-area-code: ${SEED_AREA_CODE:32}
+
+anthropic:
+  # Claude API (미션 문구 생성 — 결정 17). 모델은 가장 빠른 것을 쓴다.
+  # 이 호출이 슬롯 돌리기 응답 시간에 그대로 얹히기 때문이다.
+  api-key: ${ANTHROPIC_API_KEY:}
+  model: ${ANTHROPIC_MODEL:claude-haiku-4-5}
+  # 응답 길이 상한. 미션 문구 몇 줄이라 크게 잡을 이유가 없다.
+  max-tokens: ${ANTHROPIC_MAX_TOKENS:1024}
+  # 기다릴 시간(초). 넘기면 템플릿 방식으로 되돌아간다.
+  # SDK 기본값은 10분이라, 그대로 두면 슬롯 응답이 10분간 멈춰 있을 수 있다.
+  timeout-seconds: ${ANTHROPIC_TIMEOUT_SECONDS:8}
+
 jwt:
   secret: ${JWT_SECRET:}
   access-token-validity-seconds: ${JWT_ACCESS_TOKEN_VALIDITY:3600}

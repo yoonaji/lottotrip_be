@@ -12,6 +12,7 @@ public enum ErrorCode {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "COMMON_400", "잘못된 요청입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "COMMON_401", "인증이 필요합니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 내부 오류입니다."),
+    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON_503", "서비스를 이용할 수 없습니다."),
 
     // 인증
     INVALID_PROVIDER_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "소셜 토큰이 유효하지 않습니다."),

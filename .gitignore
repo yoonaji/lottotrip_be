@@ -1,6 +1,9 @@
 .gradle
 build/
 .env
+# .env 백업본(.env.bak.20260813 등). 원본과 똑같이 인증키·비밀번호가 들어 있는데
+# 이름이 .env가 아니라서 위 규칙에 걸리지 않아 git add -A에 딸려 들어간 적이 있다.
+.env.bak*
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -11,6 +14,7 @@ CLAUDE.md
 history.md
 roadmap.md
 tour_api_erd.md
+docs/
 
 ### IntelliJ IDEA ###
 .idea/
