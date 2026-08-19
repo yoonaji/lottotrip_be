@@ -31,6 +31,8 @@ public class SecurityConfig {
             "/api/v1/auth/refresh",
             // API 문서
             "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**",
+            // STOMP 핸드셰이크 — 인증은 HTTP 헤더가 아니라 CONNECT 프레임에서 이뤄진다(StompAuthInterceptor).
+            "/ws/**",
     };
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;

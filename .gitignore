@@ -49,3 +49,11 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Terraform ###
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/*.tfvars
+infra/terraform/crash.log
+# .terraform.lock.hcl는 provider 버전 고정용이라 커밋 대상 (gitignore 안 함)
