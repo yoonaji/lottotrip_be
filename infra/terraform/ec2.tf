@@ -46,11 +46,12 @@ resource "aws_instance" "app" {
 
     # docker-compose(standalone)가 쓰는 build 백엔드. AL2023에 딸려오는 버전이 너무 낮아서
     # 최신으로 교체해 둔다 (안 하면 "compose build requires buildx 0.17.0 or later"로 실패).
-    mkdir -p /home/ec2-user/.docker/cli-plugins
+    # 시스템 전역 플러그인 경로에 깔아야 ec2-user(SSH)와 root(SSM RunCommand) 둘 다 집어간다
+    # — ec2-user 홈에만 깔았다가 SSM(root) 배포에서 다시 이 에러를 만난 적이 있다.
+    mkdir -p /usr/libexec/docker/cli-plugins
     curl -fSL "https://github.com/docker/buildx/releases/download/v0.36.1/buildx-v0.36.1.linux-arm64" \
-      -o /home/ec2-user/.docker/cli-plugins/docker-buildx
-    chmod +x /home/ec2-user/.docker/cli-plugins/docker-buildx
-    chown -R ec2-user:ec2-user /home/ec2-user/.docker
+      -o /usr/libexec/docker/cli-plugins/docker-buildx
+    chmod +x /usr/libexec/docker/cli-plugins/docker-buildx
 
     # t4g.micro는 RAM 1GB라 Gradle 빌드 중 스왑 없이 OOM으로 인스턴스 전체가 응답 불능이
     # 될 수 있다 (실제로 한 번 겪음 — SSM/SSH 둘 다 무응답, stop/start로만 복구됨).
