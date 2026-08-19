@@ -1,4 +1,4 @@
-package com.lottotrip.common.error;
+package com.lottotrip.common.exception;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,8 +14,8 @@ public enum ErrorCode {
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "COMMON_500", "서버 내부 오류입니다."),
 
     // 인증
-    INVALID_PROVIDER_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "소셜 로그인 토큰이 유효하지 않습니다."),
-    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_002", "리프레시 토큰이 유효하지 않습니다."),
+    INVALID_PROVIDER_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_001", "소셜 토큰이 유효하지 않습니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH_002", "리프레시 토큰이 만료되었거나 유효하지 않습니다."),
 
     // 슬롯
     NO_PLACE_FOUND(HttpStatus.NOT_FOUND, "SLOT_001", "반경 내 후보 장소가 없습니다."),
@@ -27,8 +27,8 @@ public enum ErrorCode {
 
     // 미션
     MISSION_NOT_FOUND(HttpStatus.NOT_FOUND, "MISSION_001", "미션을 찾을 수 없습니다."),
-    ALREADY_COMPLETED(HttpStatus.CONFLICT, "MISSION_002", "이미 완료한 미션입니다."),
-    VERIFICATION_FAILED(HttpStatus.UNPROCESSABLE_ENTITY, "MISSION_003", "위치 인증에 실패했습니다."),
+    ALREADY_COMPLETED(HttpStatus.CONFLICT, "MISSION_002", "이미 완료된 미션입니다."),
+    VERIFICATION_FAILED(HttpStatus.UNPROCESSABLE_CONTENT, "MISSION_003", "위치 인증에 실패했습니다."),
 
     // 영상
     JOB_NOT_FOUND(HttpStatus.NOT_FOUND, "VIDEO_001", "렌더링 작업을 찾을 수 없습니다."),

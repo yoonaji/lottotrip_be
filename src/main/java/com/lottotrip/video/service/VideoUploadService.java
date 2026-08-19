@@ -1,7 +1,7 @@
 package com.lottotrip.video.service;
 
-import com.lottotrip.common.error.ApiException;
-import com.lottotrip.common.error.ErrorCode;
+import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.video.dto.UploadUrlRequest;
 import com.lottotrip.video.dto.UploadUrlResponse;
 import com.lottotrip.video.dto.UploadUrlResponse.UploadItem;
@@ -36,7 +36,7 @@ public class VideoUploadService {
     public UploadUrlResponse issueUploadUrls(Long userId, UploadUrlRequest request) {
         int fileCount = request.fileCount();
         if (fileCount < MIN_FILE_COUNT || fileCount > MAX_FILE_COUNT) {
-            throw new ApiException(ErrorCode.INVALID_FILE_COUNT);
+            throw new CustomException(ErrorCode.INVALID_FILE_COUNT);
         }
         String contentType = StringUtils.hasText(request.contentType()) ? request.contentType() : DEFAULT_CONTENT_TYPE;
 

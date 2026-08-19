@@ -3,9 +3,9 @@ package com.lottotrip.chat.ws;
 import com.lottotrip.chat.dto.ChatMessageBroadcast;
 import com.lottotrip.chat.dto.ChatSendRequest;
 import com.lottotrip.chat.service.ChatService;
-import com.lottotrip.common.error.ApiException;
-import com.lottotrip.common.error.ErrorCode;
-import com.lottotrip.common.response.ApiError;
+import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.common.response.ApiResponse;
 import java.security.Principal;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -29,11 +29,11 @@ public class ChatWebSocketController {
         try {
             ChatMessageBroadcast broadcast = chatService.send(userId, roomId, request.messageText());
             messagingTemplate.convertAndSend("/sub/chat/rooms/" + roomId, broadcast);
-        } catch (ApiException e) {
+        } catch (CustomException e) {
             messagingTemplate.convertAndSendToUser(
                     principal.getName(),
                     "/queue/errors",
-                    new ApiError(e.getErrorCode().getCode(), e.getErrorCode().getMessage())
+                    new ApiResponse.ErrorResponse(e.getErrorCode().getCode(), e.getErrorCode().getMessage())
             );
         }
     }
@@ -42,7 +42,7 @@ public class ChatWebSocketController {
         try {
             return Long.valueOf(principal.getName());
         } catch (NumberFormatException e) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.lottotrip.video.service;
 
-import com.lottotrip.common.error.ApiException;
-import com.lottotrip.common.error.ErrorCode;
+import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.video.dto.RenderRequest;
 import com.lottotrip.video.dto.RenderResponse;
 import com.lottotrip.video.dto.RenderStatusResponse;
@@ -41,7 +41,7 @@ public class VideoRenderService {
     public RenderStatusResponse getStatus(Long userId, String jobId) {
         ShortformJob job = shortformJobRepository.findById(jobId)
                 .filter(found -> found.getUserId().equals(userId))
-                .orElseThrow(() -> new ApiException(ErrorCode.JOB_NOT_FOUND));
+                .orElseThrow(() -> new CustomException(ErrorCode.JOB_NOT_FOUND));
 
         return new RenderStatusResponse(
                 job.getJobId(),

@@ -5,7 +5,6 @@ import com.lottotrip.chat.dto.ChatRoomListResponse;
 import com.lottotrip.chat.service.ChatService;
 import com.lottotrip.common.auth.CurrentUserId;
 import com.lottotrip.common.response.ApiResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +23,7 @@ public class ChatController {
 
     @GetMapping("/rooms")
     public ApiResponse<ChatRoomListResponse> getMyRooms(@CurrentUserId Long userId) {
-        return ApiResponse.success(HttpStatus.OK.value(), chatService.getMyRooms(userId));
+        return ApiResponse.success(chatService.getMyRooms(userId));
     }
 
     @GetMapping("/rooms/{roomId}/messages")
@@ -34,6 +33,6 @@ public class ChatController {
             @RequestParam(required = false) String cursor,
             @RequestParam(required = false) Integer size
     ) {
-        return ApiResponse.success(HttpStatus.OK.value(), chatService.getHistory(userId, roomId, cursor, size));
+        return ApiResponse.success(chatService.getHistory(userId, roomId, cursor, size));
     }
 }

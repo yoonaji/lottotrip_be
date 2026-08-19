@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.lottotrip.common.error.ApiException;
+import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.video.dto.RenderRequest;
 import com.lottotrip.video.dto.RenderRequest.ClipItem;
 import com.lottotrip.video.dto.RenderResponse;
@@ -55,7 +55,7 @@ class VideoRenderServiceTest {
         when(shortformJobRepository.findById("render_missing")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> videoRenderService.getStatus(1L, "render_missing"))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -64,6 +64,6 @@ class VideoRenderServiceTest {
         when(shortformJobRepository.findById("render_abc123")).thenReturn(Optional.of(job));
 
         assertThatThrownBy(() -> videoRenderService.getStatus(2L, "render_abc123"))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 }

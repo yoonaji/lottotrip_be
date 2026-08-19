@@ -10,7 +10,6 @@ import com.lottotrip.video.dto.UploadUrlResponse;
 import com.lottotrip.video.service.VideoRenderService;
 import com.lottotrip.video.service.VideoUploadService;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,7 +35,7 @@ public class VideoController {
             @Valid @RequestBody UploadUrlRequest request
     ) {
         UploadUrlResponse response = videoUploadService.issueUploadUrls(userId, request);
-        return ApiResponse.success(HttpStatus.OK.value(), response);
+        return ApiResponse.success(response);
     }
 
     @PostMapping("/render")
@@ -45,7 +44,7 @@ public class VideoController {
             @Valid @RequestBody RenderRequest request
     ) {
         RenderResponse response = videoRenderService.createJob(userId, request);
-        return ApiResponse.success(HttpStatus.OK.value(), response);
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/render/{jobId}")
@@ -54,6 +53,6 @@ public class VideoController {
             @PathVariable String jobId
     ) {
         RenderStatusResponse response = videoRenderService.getStatus(userId, jobId);
-        return ApiResponse.success(HttpStatus.OK.value(), response);
+        return ApiResponse.success(response);
     }
 }

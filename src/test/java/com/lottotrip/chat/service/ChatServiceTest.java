@@ -18,7 +18,7 @@ import com.lottotrip.chat.repository.ChatMessageRepository;
 import com.lottotrip.chat.repository.ChatRoomRepository;
 import com.lottotrip.chat.repository.ChatUserRepository;
 import com.lottotrip.chat.repository.RoomMemberCount;
-import com.lottotrip.common.error.ApiException;
+import com.lottotrip.common.exception.CustomException;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -66,7 +66,7 @@ class ChatServiceTest {
         when(chatRoomRepository.existsById(9999L)).thenReturn(false);
 
         assertThatThrownBy(() -> chatService.getHistory(1L, 9999L, null, null))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -75,7 +75,7 @@ class ChatServiceTest {
         when(chatUserRepository.existsByRoomIdAndUserId(7001L, 1L)).thenReturn(false);
 
         assertThatThrownBy(() -> chatService.getHistory(1L, 7001L, null, null))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -116,7 +116,7 @@ class ChatServiceTest {
     @Test
     void 빈_메시지_발행시_예외() {
         assertThatThrownBy(() -> chatService.send(1L, 7001L, "  "))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -124,7 +124,7 @@ class ChatServiceTest {
         when(chatRoomRepository.existsById(9999L)).thenReturn(false);
 
         assertThatThrownBy(() -> chatService.send(1L, 9999L, "안녕"))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -133,7 +133,7 @@ class ChatServiceTest {
         when(chatUserRepository.existsByRoomIdAndUserId(7001L, 1L)).thenReturn(false);
 
         assertThatThrownBy(() -> chatService.send(1L, 7001L, "안녕"))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     private ChatMessage buildMessage(Long id, String text) throws Exception {

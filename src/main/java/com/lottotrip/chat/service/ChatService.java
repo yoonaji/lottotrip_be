@@ -12,8 +12,8 @@ import com.lottotrip.chat.repository.ChatMessageRepository;
 import com.lottotrip.chat.repository.ChatRoomRepository;
 import com.lottotrip.chat.repository.ChatUserRepository;
 import com.lottotrip.chat.repository.RoomMemberCount;
-import com.lottotrip.common.error.ApiException;
-import com.lottotrip.common.error.ErrorCode;
+import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.common.exception.ErrorCode;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Comparator;
@@ -70,10 +70,10 @@ public class ChatService {
     @Transactional(readOnly = true)
     public ChatMessageHistoryResponse getHistory(Long userId, Long roomId, String cursor, Integer size) {
         if (!chatRoomRepository.existsById(roomId)) {
-            throw new ApiException(ErrorCode.ROOM_NOT_FOUND);
+            throw new CustomException(ErrorCode.ROOM_NOT_FOUND);
         }
         if (!chatUserRepository.existsByRoomIdAndUserId(roomId, userId)) {
-            throw new ApiException(ErrorCode.NOT_ROOM_MEMBER);
+            throw new CustomException(ErrorCode.NOT_ROOM_MEMBER);
         }
 
         int pageSize = (size != null && size > 0) ? size : DEFAULT_HISTORY_SIZE;
@@ -103,13 +103,13 @@ public class ChatService {
     @Transactional
     public ChatMessageBroadcast send(Long userId, Long roomId, String messageText) {
         if (!StringUtils.hasText(messageText)) {
-            throw new ApiException(ErrorCode.BAD_REQUEST);
+            throw new CustomException(ErrorCode.BAD_REQUEST);
         }
         if (!chatRoomRepository.existsById(roomId)) {
-            throw new ApiException(ErrorCode.ROOM_NOT_FOUND);
+            throw new CustomException(ErrorCode.ROOM_NOT_FOUND);
         }
         if (!chatUserRepository.existsByRoomIdAndUserId(roomId, userId)) {
-            throw new ApiException(ErrorCode.NOT_ROOM_MEMBER);
+            throw new CustomException(ErrorCode.NOT_ROOM_MEMBER);
         }
 
         ChatMessage saved = chatMessageRepository.save(ChatMessage.create(roomId, userId, messageText));
@@ -134,7 +134,7 @@ public class ChatService {
             byte[] decoded = Base64.getUrlDecoder().decode(cursor);
             return Long.valueOf(new String(decoded, StandardCharsets.UTF_8));
         } catch (Exception e) {
-            throw new ApiException(ErrorCode.BAD_REQUEST);
+            throw new CustomException(ErrorCode.BAD_REQUEST);
         }
     }
 }

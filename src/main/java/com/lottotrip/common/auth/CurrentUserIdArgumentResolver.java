@@ -1,7 +1,7 @@
 package com.lottotrip.common.auth;
 
-import com.lottotrip.common.error.ApiException;
-import com.lottotrip.common.error.ErrorCode;
+import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.common.exception.ErrorCode;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,12 +25,12 @@ public class CurrentUserIdArgumentResolver implements HandlerMethodArgumentResol
                                    NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
         try {
             return Long.valueOf(authentication.getName());
         } catch (NumberFormatException e) {
-            throw new ApiException(ErrorCode.UNAUTHORIZED);
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
     }
 }

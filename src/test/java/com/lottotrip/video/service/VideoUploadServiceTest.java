@@ -6,7 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.lottotrip.common.error.ApiException;
+import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.video.dto.UploadUrlRequest;
 import com.lottotrip.video.dto.UploadUrlResponse;
 import java.net.URI;
@@ -49,12 +49,12 @@ class VideoUploadServiceTest {
     @Test
     void fileCount이_0이면_INVALID_FILE_COUNT_예외() {
         assertThatThrownBy(() -> videoUploadService.issueUploadUrls(1L, new UploadUrlRequest(0, null)))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
     void fileCount이_10을_초과하면_INVALID_FILE_COUNT_예외() {
         assertThatThrownBy(() -> videoUploadService.issueUploadUrls(1L, new UploadUrlRequest(11, null)))
-                .isInstanceOf(ApiException.class);
+                .isInstanceOf(CustomException.class);
     }
 }
