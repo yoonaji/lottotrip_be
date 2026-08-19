@@ -9,6 +9,11 @@ AWS_REGION="ap-northeast-2"
 
 cd "$APP_DIR"
 
+# SSM RunCommand는 root로 실행되는데 이 디렉터리는 ec2-user 소유라, git이
+# "dubious ownership"으로 막는다. root의 git 설정에 예외로 등록해 둔다(멱등).
+git config --global --get-all safe.directory | grep -qx "$APP_DIR" || \
+  git config --global --add safe.directory "$APP_DIR"
+
 echo "==> 최신 코드로 갱신"
 git fetch origin main
 git reset --hard origin/main
