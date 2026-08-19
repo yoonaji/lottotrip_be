@@ -27,8 +27,8 @@ aws ssm get-parameters-by-path \
 chmod 600 .env
 
 echo "==> 이미지 빌드 및 재기동"
-docker compose -f docker-compose.prod.yml build app
-docker compose -f docker-compose.prod.yml up -d app
+docker-compose -f docker-compose.prod.yml build app
+docker-compose -f docker-compose.prod.yml up -d app
 
 echo "==> 이전 이미지 정리"
 docker image prune -f
@@ -43,5 +43,5 @@ for i in $(seq 1 20); do
   sleep 5
 done
 
-echo "FAIL: 헬스체크 타임아웃 — 로그 확인 필요 (docker compose -f docker-compose.prod.yml logs app)"
+echo "FAIL: 헬스체크 타임아웃 — 로그 확인 필요 (docker-compose -f docker-compose.prod.yml logs app)"
 exit 1

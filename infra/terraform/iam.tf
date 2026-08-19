@@ -69,10 +69,14 @@ resource "aws_iam_instance_profile" "app_ec2" {
 # 읽을 수 있게 제한한다. 나머지 계정 파라미터는 이 정책으로 못 건드림.
 data "aws_iam_policy_document" "app_config_read" {
   statement {
-    sid       = "SSMParameterRead"
-    effect    = "Allow"
-    actions   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
-    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*"]
+    sid     = "SSMParameterRead"
+    effect  = "Allow"
+    actions = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+    # GetParametersByPath는 경로 자체(와일드카드 없는 형태)에 대한 권한도 따로 확인한다.
+    resources = [
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}",
+      "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*",
+    ]
   }
 
   statement {

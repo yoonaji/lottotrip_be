@@ -43,6 +43,24 @@ resource "aws_instance" "app" {
     curl -SL "https://github.com/docker/compose/releases/latest/download/docker-compose-linux-aarch64" \
       -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
+
+    # docker-compose(standalone)가 쓰는 build 백엔드. AL2023에 딸려오는 버전이 너무 낮아서
+    # 최신으로 교체해 둔다 (안 하면 "compose build requires buildx 0.17.0 or later"로 실패).
+    mkdir -p /home/ec2-user/.docker/cli-plugins
+    curl -fSL "https://github.com/docker/buildx/releases/download/v0.36.1/buildx-v0.36.1.linux-arm64" \
+      -o /home/ec2-user/.docker/cli-plugins/docker-buildx
+    chmod +x /home/ec2-user/.docker/cli-plugins/docker-buildx
+    chown -R ec2-user:ec2-user /home/ec2-user/.docker
+
+    # t4g.micro는 RAM 1GB라 Gradle 빌드 중 스왑 없이 OOM으로 인스턴스 전체가 응답 불능이
+    # 될 수 있다 (실제로 한 번 겪음 — SSM/SSH 둘 다 무응답, stop/start로만 복구됨).
+    if [ ! -f /swapfile ]; then
+      fallocate -l 2G /swapfile
+      chmod 600 /swapfile
+      mkswap /swapfile
+      swapon /swapfile
+      echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+    fi
   EOF
 
   tags = {
