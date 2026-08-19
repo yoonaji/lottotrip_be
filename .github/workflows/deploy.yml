@@ -1,0 +1,62 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [main]
+
+# id-token: write가 있어야 GitHub OIDC 토큰을 발급받아 AWS 역할을 assume할 수 있다.
+# AWS 액세스 키를 GitHub Secrets에 저장하지 않는 이유가 이거다.
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          # infra/terraform 출력값(github_actions_role_arn/instance_id). 인스턴스를 새로 만들면
+          # 여기도 같이 갱신해야 한다.
+          role-to-assume: arn:aws:iam::489502662597:role/lottotrip-dev-github-deploy
+          aws-region: ap-northeast-2
+
+      - name: Trigger deploy via SSM
+        env:
+          INSTANCE_ID: i-001555a0f6fdaf9d4
+        run: |
+          set -euo pipefail
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["bash /opt/lottotrip/scripts/deploy.sh"]' \
+            --query "Command.CommandId" --output text)
+
+          echo "SSM Command ID: $COMMAND_ID"
+
+          for i in $(seq 1 40); do
+            sleep 5
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "$INSTANCE_ID" \
+              --query "Status" --output text 2>/dev/null || echo "Pending")
+            echo "status: $STATUS"
+
+            if [ "$STATUS" = "Success" ]; then
+              exit 0
+            fi
+            if [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              echo "---- stdout ----"
+              aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+                --query "StandardOutputContent" --output text
+              echo "---- stderr ----"
+              aws ssm get-command-invocation --command-id "$COMMAND_ID" --instance-id "$INSTANCE_ID" \
+                --query "StandardErrorContent" --output text
+              exit 1
+            fi
+          done
+
+          echo "배포 완료 대기 타임아웃"
+          exit 1

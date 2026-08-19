@@ -1,0 +1,7 @@
+# terraform.tfvars로 복사해서 채운 뒤 사용 (terraform.tfvars는 .gitignore 대상)
+
+# ssh-keygen -t ed25519 -f ~/.ssh/lottotrip 로 만든 뒤 .pub 내용을 그대로 붙여넣는다.
+ssh_public_key = "ssh-ed25519 AAAA... your-key-comment"
+
+# 본인 IP/32로 좁혀서 쓴다. 확인: curl -s ifconfig.me
+admin_cidr = "123.45.67.89/32"

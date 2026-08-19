@@ -33,3 +33,59 @@ resource "aws_iam_user_policy_attachment" "app" {
 resource "aws_iam_access_key" "app" {
   user = aws_iam_user.app.name
 }
+
+# --- EC2 인스턴스 역할 ---
+# 실서버는 위 IAM 유저의 장기 액세스 키를 쓰지 않는다. 인스턴스 프로파일이 EC2에
+# 임시 자격증명을 자동 공급하므로, 서버 어디에도 키를 저장/유출할 필요가 없다.
+resource "aws_iam_role" "app_ec2" {
+  name = "${var.project}-ec2-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "app_ec2" {
+  role       = aws_iam_role.app_ec2.name
+  policy_arn = aws_iam_policy.app.arn
+}
+
+resource "aws_iam_role_policy_attachment" "app_ec2_config_read" {
+  role       = aws_iam_role.app_ec2.name
+  policy_arn = aws_iam_policy.app_config_read.arn
+}
+
+resource "aws_iam_instance_profile" "app_ec2" {
+  name = "${var.project}-ec2-profile"
+  role = aws_iam_role.app_ec2.name
+}
+
+# 서버가 자기 경로(/${var.project}/*)의 SSM 파라미터(DB_URL, DB_PASSWORD, JWT_SECRET 등)만
+# 읽을 수 있게 제한한다. 나머지 계정 파라미터는 이 정책으로 못 건드림.
+data "aws_iam_policy_document" "app_config_read" {
+  statement {
+    sid       = "SSMParameterRead"
+    effect    = "Allow"
+    actions   = ["ssm:GetParameter", "ssm:GetParameters", "ssm:GetParametersByPath"]
+    resources = ["arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:parameter${local.ssm_prefix}/*"]
+  }
+
+  statement {
+    sid     = "SSMDecrypt"
+    effect  = "Allow"
+    actions = ["kms:Decrypt"]
+    # SecureString 기본 키(alias/aws/ssm)는 AWS 관리형이라 계정마다 고정 ARN이 없어 "*"로 둔다.
+    # 실질적인 범위는 위 SSMParameterRead가 이미 우리 파라미터 경로로 좁혀 놓는다.
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "app_config_read" {
+  name   = "${var.project}-config-read-policy"
+  policy = data.aws_iam_policy_document.app_config_read.json
+}
