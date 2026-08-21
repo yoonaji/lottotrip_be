@@ -65,7 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(StubbedSocialServerConfig.class)
-@TestPropertySource(properties = {"tourapi.service-key=", "anthropic.api-key="})
+@TestPropertySource(properties = {"tourapi.service-key=", "anthropic.api-key=",
+        "oauth.kakao.app-id=" + StubbedSocialServerConfig.KAKAO_APP_ID})
 @Transactional
 class FullScenarioIntegrationTest extends PostgresContainerSupport {
 
@@ -122,6 +123,7 @@ class FullScenarioIntegrationTest extends PostgresContainerSupport {
     void setUp() {
         sequence = 0;
         kakaoServer.reset();
+        StubbedSocialServerConfig.expectValidTokenInfo(kakaoServer);
     }
 
     // ---------- 각 단계를 한 줄로 부르기 위한 도우미 ----------
@@ -290,6 +292,7 @@ class FullScenarioIntegrationTest extends PostgresContainerSupport {
         int slotId = read(draw(owner), "$.data.slotId");
 
         kakaoServer.reset();
+        StubbedSocialServerConfig.expectValidTokenInfo(kakaoServer);
         kakaoServer.expect(ExpectedCount.manyTimes(),
                         requestTo(StubbedSocialServerConfig.KAKAO_USER_INFO_URI))
                 .andRespond(withSuccess("""

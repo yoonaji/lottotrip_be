@@ -14,6 +14,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
@@ -41,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(StubbedSocialServerConfig.class)
+@TestPropertySource(properties = "oauth.kakao.app-id=" + StubbedSocialServerConfig.KAKAO_APP_ID)
 // 테스트마다 트랜잭션을 열고 끝나면 되돌린다. 앞 테스트가 만든 회원이 다음 테스트에 남지 않는다.
 @Transactional
 class AuthIntegrationTest extends PostgresContainerSupport {
@@ -75,6 +77,7 @@ class AuthIntegrationTest extends PostgresContainerSupport {
     void setUp() {
         // 기대 요청은 테스트마다 새로 등록한다. 남겨 두면 앞 테스트의 기대가 뒤에 영향을 준다.
         kakaoServer.reset();
+        StubbedSocialServerConfig.expectValidTokenInfo(kakaoServer);
     }
 
     private void expectKakaoCall(String responseBody) {
