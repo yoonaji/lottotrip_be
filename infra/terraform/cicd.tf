@@ -12,6 +12,11 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   thumbprint_list = [data.tls_certificate.github_actions.certificates[0].sha1_fingerprint]
 }
 
+locals {
+  github_owner     = split("/", var.github_repo)[0]
+  github_repo_name = split("/", var.github_repo)[1]
+}
+
 # 이 역할은 SSM으로 EC2에 배포 커맨드를 보내는 것 말고는 아무 권한도 없다.
 # 특정 리포의 특정 브랜치(main)에서 온 토큰만 assume 가능하도록 sub 클레임으로 제한한다.
 data "aws_iam_policy_document" "github_actions_trust" {
@@ -30,10 +35,17 @@ data "aws_iam_policy_document" "github_actions_trust" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # GitHub이 sub 클레임에 소유자/리포 "이름" 바로 뒤에 불변 숫자 ID를 붙이는 새 포맷을 쓴다
+    # (예: "repo:yoonaji@168801970/lottotrip_be@1306545378:ref:refs/heads/main" — @168801970은
+    # yoonaji 뒤에, @1306545378은 lottotrip_be 뒤에 붙는다). 예전처럼
+    # "repo:${var.github_repo}:ref:..."로 이름만 매칭하면 실제 토큰과 안 맞아서
+    # AssumeRoleWithWebIdentity가 "Not authorized"로 거부된다 — 실제로 겪은 문제.
+    # ID는 계정/리포가 유지되는 한 안 바뀌므로(이름 변경·이관에도 안전) 이름 각각 뒤에
+    # 와일드카드를 둬서 "이름(@ID)?" 둘 다 받아들이게 한다.
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repo}:ref:refs/heads/${var.github_deploy_branch}"]
+      values   = ["repo:${local.github_owner}*/${local.github_repo_name}*:ref:refs/heads/${var.github_deploy_branch}"]
     }
   }
 }
