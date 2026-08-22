@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.client.ExpectedCount;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.servlet.MockMvc;
@@ -40,6 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(StubbedSocialServerConfig.class)
+@TestPropertySource(properties = "oauth.kakao.app-id=" + StubbedSocialServerConfig.KAKAO_APP_ID)
 @Transactional
 class WithdrawalIntegrationTest extends PostgresContainerSupport {
 
@@ -74,6 +76,7 @@ class WithdrawalIntegrationTest extends PostgresContainerSupport {
     @BeforeEach
     void setUp() {
         kakaoServer.reset();
+        StubbedSocialServerConfig.expectValidTokenInfo(kakaoServer);
     }
 
     // ---------- 도우미 ----------
