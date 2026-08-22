@@ -248,6 +248,8 @@ CONNECT 프레임의 `Authorization` STOMP 헤더로 JWT access token 전달 (`A
 
 SEND 처리 중 실패(멤버 아님, 방 없음 등)는 브로드캐스트하지 않고 발신자 개인 큐로만 전달: `/user/queue/errors`, 공통 에러 포맷(`{code, message}`) 그대로 사용.
 
+> **알려진 이슈 (2026-08-22, 배포 후 실제 검증 중 발견)**: 존재하지 않는 방/멤버 아닌 방에 SEND해도 저장·브로드캐스트는 정상적으로 안 되는 것까지는 확인했으나(핵심 동작엔 영향 없음), `/user/queue/errors`로의 에러 알림 전달 자체가 클라이언트에 도달하지 않는 걸 재현 확인함. 서버 쪽 예외는 조용히 처리되고 로그도 안 남아 원인 미상 — Spring의 user-destination 라우팅(`UserDestinationMessageHandler`) 쪽 이슈로 추정. 우선순위 낮음으로 보류.
+
 ---
 
 ## 8. 에러 코드 추가분
