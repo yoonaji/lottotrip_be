@@ -269,8 +269,5 @@ SEND 처리 중 실패(멤버 아님, 방 없음 등)는 브로드캐스트하�
 
 1. ~~JWT 인증 필터~~ — 완료. `DevHeaderAuthFilter` 삭제됨, `JwtAuthenticationFilter`가 principal name에 userId(문자열)를 넣어서 `CurrentUserIdArgumentResolver`가 그대로 동작함.
 2. ~~STOMP CONNECT 인증~~ — 완료 (2026-08-22). `StompAuthInterceptor`가 실제 JWT 검증으로 교체됨.
-3. **SlotDrawnEvent 발행 — 아직 안 됨.** 프로젝트 전체에 `ApplicationEventPublisher` 사용처가 0건. 슬롯 저장 성공 코드 마지막에 아래 한 줄만 추가하면 된다 (6장 참고). **이거 없으면 채팅방 자동 합류 기능이 전혀 동작하지 않음 — `GET /api/v1/chat/rooms`가 항상 빈 배열.**
-   ```java
-   applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, placeId, place.getName()));
-   ```
+3. ~~SlotDrawnEvent 발행~~ — 완료 (2026-08-22). `SlotService.draw()`의 `savedSlotRepository.save(...)` 직후에 발행하도록 추가함 (B가 대신 추가).
 4. ~~채팅 nickname~~ — 완료 (2026-08-22). B가 `UserRepository`를 직접 조회하는 방식으로 해결.

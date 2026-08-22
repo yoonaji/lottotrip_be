@@ -1,6 +1,7 @@
 package com.lottotrip.slot.service;
 
 import com.lottotrip.common.enums.BudgetLevel;
+import com.lottotrip.common.event.SlotDrawnEvent;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.mission.entity.Mission;
@@ -21,6 +22,7 @@ import com.lottotrip.user.entity.User;
 import com.lottotrip.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,7 @@ public class SlotService {
     private final PlaceUpserter placeUpserter;
     private final MissionMatcher missionMatcher;
     private final SavedSlotRepository savedSlotRepository;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 슬롯을 돌린다. 이 도메인의 핵심 흐름. (tour_api_erd.md 2-4, roadmap 6-13)
@@ -104,6 +107,10 @@ public class SlotService {
 
         // 미션을 함께 남긴다. 남기지 않으면 슬롯 조회 시 다른 미션을 돌려준다.
         SavedSlot savedSlot = savedSlotRepository.save(SavedSlot.create(session, place, mission));
+
+        // 채팅 도메인(B)이 이 장소 기준 오늘자 채팅방에 유저를 자동 합류시킨다.
+        // 리스너가 AFTER_COMMIT이라 여기서 발행해도 트랜잭션이 롤백되면 안 발화한다.
+        applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, place.getId(), place.getName()));
 
         return SlotDrawResponse.of(savedSlot.getId(), place, distanceKmOf(item), item.thumbnailUrl(), mission);
     }

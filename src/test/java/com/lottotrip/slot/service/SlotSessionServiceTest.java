@@ -53,7 +53,7 @@ class SlotSessionServiceTest extends PostgresContainerSupport {
         // 이 테스트는 세션 확보만 본다. 추첨·미션 쪽 의존은 getOrCreateActiveSession이
         // 건드리지 않으므로 넘기지 않는다. 실수로 쓰이면 즉시 NPE로 드러난다.
         slotService = new SlotService(tripSessionRepository, userRepository,
-                null, null, null, null);
+                null, null, null, null, null);
         user = userRepository.save(User.create("a@test.com", "테스터", null));
     }
 

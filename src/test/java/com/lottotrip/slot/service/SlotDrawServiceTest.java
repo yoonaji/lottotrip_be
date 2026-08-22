@@ -98,7 +98,8 @@ class SlotDrawServiceTest extends PostgresContainerSupport {
                 new PlaceUpserter(placeRepository, placeMediaRepository,
                         stateRepository, cityRepository, new TravelCategoryMapper()),
                 new MissionMatcher(missionRepository, new TemplateMissionGenerator()),
-                savedSlotRepository);
+                savedSlotRepository,
+                event -> { });
         user = userRepository.save(User.create("a@test.com", "테스터", null));
     }
 
