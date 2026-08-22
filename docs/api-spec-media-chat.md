@@ -2,7 +2,7 @@
 
 Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 이 내용으로 반영 필요.
 
-공통 응답 형식(`{status, data, error}`)은 기존 문서 그대로 따름. `status`는 항상 실제 HTTP status code와 동일한 값을 담는다.
+> **정정 (2026-08-22)**: 이 문서는 원래 공통 응답 형식을 `{status, data, error}`(`status`가 HTTP status code)로 가정하고 작성됐다. 이후 A의 공통 모듈(`common.response.ApiResponse`)로 통일하면서 실제 응답은 `{success, data, error}`(`success`는 boolean)로 나간다. 아래 예시의 `"status": 200`은 전부 `"success": true`로 읽어야 한다 — **프론트는 `success` 필드를 봐야 하고, `status` 필드는 존재하지 않는다.** `data` 안의 `status`(예: `"PENDING"`, `"COMPLETED"`)는 잡 상태값이라 별개이며 그대로 유효하다.
 
 ---
 
@@ -29,7 +29,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": {
     "uploads": [
       { "order": 1, "uploadUrl": "https://s3.../clip1.mp4?X-Amz-Signature=...", "clipUrl": "https://s3.../clip1.mp4", "expiresIn": 600 },
@@ -80,7 +80,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": { "jobId": "render_a1b2c3", "status": "PENDING" },
   "error": null
 }
@@ -102,7 +102,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": { "jobId": "render_a1b2c3", "status": "PROCESSING", "progress": 45, "videoUrl": null },
   "error": null
 }
@@ -112,7 +112,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": { "jobId": "render_a1b2c3", "status": "COMPLETED", "progress": 100, "videoUrl": "https://s3.../final/render_a1b2c3.mp4" },
   "error": null
 }
@@ -124,7 +124,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": { "jobId": "render_a1b2c3", "status": "FAILED", "progress": 60, "videoUrl": null, "failReason": "FFMPEG_MERGE_FAILED" },
   "error": null
 }
@@ -144,7 +144,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": {
     "rooms": [
       { "roomId": 7001, "placeName": "사천진해변", "memberCount": 4 }
@@ -172,7 +172,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 
 ```json
 {
-  "status": 200,
+  "success": true,
   "data": {
     "messages": [
       { "messageId": 88012, "senderId": 1, "nickname": "감자러버", "messageText": "안녕하세요!", "createdAt": "2026-08-03T10:15:00+09:00" }
@@ -183,7 +183,7 @@ Notion 원본 명세를 기반으로 구현 전 확정한 버전. Notion에도 �
 }
 ```
 
-> **미해결**: `nickname`은 `users` 테이블(A 도메인)에서 와야 하는데 B가 아직 접근할 방법이 없어서 현재 구현은 `null`로 내려간다. A와 다음 중 하나로 정해야 함: ① JWT에 nickname 클레임 포함 → 인증 컨텍스트에서 바로 추출, ② A가 만드는 User 조회용 내부 API/Bean을 B가 호출, ③ 메시지 저장 시점에 닉네임을 스냅샷으로 `chat_messages`에 비정규화 저장. 커서(`nextCursor`)는 마지막 `messageId`를 base64 JSON(`{"id":...}`)으로 인코딩한 값으로 구현함.
+> **해결 (2026-08-22)**: 옵션 ② — 한 모놀리식 안이라 `ChatService`가 A 도메인의 `UserRepository`를 직접 주입받아 `senderId`로 닉네임을 조회한다 (별도 내부 API 없이 바로 DB 조회, `findAllById`로 이력 조회 시 N+1 방지). 탈퇴 회원의 과거 발언도 닉네임 그대로 보여준다 — 이미 인증에서 탈퇴 여부는 걸러진 뒤라 이력 표시 목적으로는 지울 이유가 없음. 커서(`nextCursor`)는 마지막 `messageId`를 base64 JSON(`{"id":...}`)으로 인코딩한 값으로 구현함.
 
 ---
 
@@ -217,7 +217,7 @@ applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, placeId, place
 
 CONNECT 프레임의 `Authorization` STOMP 헤더로 JWT access token 전달 (`Authorization: Bearer <token>`). URL 쿼리 파라미터로 토큰을 넣지 않는다 — 프록시/로그에 노출될 수 있기 때문. 서버는 `ChannelInterceptor`에서 `StompCommand.CONNECT`일 때만 토큰을 검증하고, 인증된 유저를 세션의 Principal로 바인딩해 이후 SEND/SUBSCRIBE에서 재사용한다.
 
-> **구현 상태**: `com.lottotrip.chat.ws.StompAuthInterceptor` 구현 완료. JWT가 아직 없어서 지금은 `Bearer {token}`의 `token` 값을 그대로 userId로 취급하는 임시 구현 — 헤더 이름/형식은 최종 설계 그대로라 클라이언트 쪽 변경 없이 서버 파싱 로직만 교체하면 됨.
+> **구현 상태 (2026-08-22 갱신)**: `com.lottotrip.chat.ws.StompAuthInterceptor`가 이제 실제 JWT를 검증한다 (`JwtProvider.getUserIdFromAccessToken`, HTTP 쪽 `JwtAuthenticationFilter`와 동일한 방식) — 토큰이 없거나 위조·만료됐거나 탈퇴한 회원이면 CONNECT 자체를 거부한다. 헤더 이름/형식은 원래 설계 그대로라 클라이언트 쪽 변경 없음.
 
 ### 발행 (클라이언트 → 서버)
 
@@ -267,9 +267,10 @@ SEND 처리 중 실패(멤버 아님, 방 없음 등)는 브로드캐스트하�
 
 ## 9. A가 해야 할 일 정리
 
-B 구현은 전부 끝났고, A 쪽에서 다음을 하면 임시로 박아둔 부분들이 실제 동작으로 바뀐다.
-
-1. **JWT 인증 필터**: 지금은 `com.lottotrip.config.DevHeaderAuthFilter`(local/docker 프로필 전용)가 `X-User-Id` 헤더를 그대로 인증된 유저로 취급하고 있음. A의 실제 JWT 필터가 `SecurityContextHolder`에 `Authentication`을 채울 때 **principal name을 userId(문자열)로** 넣어주면, B의 `CurrentUserIdArgumentResolver`가 그대로 동작해서 컨트롤러 쪽 코드는 하나도 안 고쳐도 됨. 다 되면 `DevHeaderAuthFilter`와 `SecurityConfig`의 관련 줄만 지우면 됨.
-2. **STOMP CONNECT 인증**: 위 8장 참고. `com.lottotrip.chat.ws.StompAuthInterceptor`의 토큰 파싱 부분만 실제 JWT 디코딩으로 교체.
-3. **SlotDrawnEvent 발행**: 슬롯 저장 성공 코드 마지막에 `applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, placeId, place.getName()))` 한 줄 추가. (6장 참고)
-4. **채팅 nickname**: 5장 하단 "미해결" 참고 — JWT에 nickname claim을 넣을지, B가 호출할 수 있는 유저 조회 API/Bean을 만들지 정해야 함.
+1. ~~JWT 인증 필터~~ — 완료. `DevHeaderAuthFilter` 삭제됨, `JwtAuthenticationFilter`가 principal name에 userId(문자열)를 넣어서 `CurrentUserIdArgumentResolver`가 그대로 동작함.
+2. ~~STOMP CONNECT 인증~~ — 완료 (2026-08-22). `StompAuthInterceptor`가 실제 JWT 검증으로 교체됨.
+3. **SlotDrawnEvent 발행 — 아직 안 됨.** 프로젝트 전체에 `ApplicationEventPublisher` 사용처가 0건. 슬롯 저장 성공 코드 마지막에 아래 한 줄만 추가하면 된다 (6장 참고). **이거 없으면 채팅방 자동 합류 기능이 전혀 동작하지 않음 — `GET /api/v1/chat/rooms`가 항상 빈 배열.**
+   ```java
+   applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, placeId, place.getName()));
+   ```
+4. ~~채팅 nickname~~ — 완료 (2026-08-22). B가 `UserRepository`를 직접 조회하는 방식으로 해결.

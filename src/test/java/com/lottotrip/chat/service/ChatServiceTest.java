@@ -19,6 +19,7 @@ import com.lottotrip.chat.repository.ChatRoomRepository;
 import com.lottotrip.chat.repository.ChatUserRepository;
 import com.lottotrip.chat.repository.RoomMemberCount;
 import com.lottotrip.common.exception.CustomException;
+import com.lottotrip.user.repository.UserRepository;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -29,8 +30,9 @@ class ChatServiceTest {
     private final ChatRoomRepository chatRoomRepository = mock(ChatRoomRepository.class);
     private final ChatUserRepository chatUserRepository = mock(ChatUserRepository.class);
     private final ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
+    private final UserRepository userRepository = mock(UserRepository.class);
     private final ChatService chatService = new ChatService(
-            chatRoomRepository, chatUserRepository, chatMessageRepository);
+            chatRoomRepository, chatUserRepository, chatMessageRepository, userRepository);
 
     @Test
     void 내가_속한_방_목록과_인원수를_반환한다() throws Exception {
@@ -99,17 +101,32 @@ class ChatServiceTest {
     }
 
     @Test
+    void 이력_조회시_발신자_닉네임을_채운다() throws Exception {
+        when(chatRoomRepository.existsById(7001L)).thenReturn(true);
+        when(chatUserRepository.existsByRoomIdAndUserId(7001L, 1L)).thenReturn(true);
+        when(chatMessageRepository.findByRoomIdOrderByMessageIdDesc(eq(7001L), any(PageRequest.class)))
+                .thenReturn(List.of(buildMessage(1L, "안녕하세요!")));
+        when(userRepository.findAllById(List.of(1L))).thenReturn(List.of(buildUser(1L, "감자러버")));
+
+        ChatMessageHistoryResponse response = chatService.getHistory(1L, 7001L, null, null);
+
+        assertThat(response.messages().get(0).nickname()).isEqualTo("감자러버");
+    }
+
+    @Test
     void 메시지_발행시_저장하고_브로드캐스트용_객체를_반환한다() throws Exception {
         when(chatRoomRepository.existsById(7001L)).thenReturn(true);
         when(chatUserRepository.existsByRoomIdAndUserId(7001L, 1L)).thenReturn(true);
         ChatMessage saved = buildMessage(88012L, "안녕하세요!");
         when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(saved);
+        when(userRepository.findById(1L)).thenReturn(java.util.Optional.of(buildUser(1L, "감자러버")));
 
         ChatMessageBroadcast broadcast = chatService.send(1L, 7001L, "안녕하세요!");
 
         assertThat(broadcast.messageId()).isEqualTo(88012L);
         assertThat(broadcast.roomId()).isEqualTo(7001L);
         assertThat(broadcast.senderId()).isEqualTo(1L);
+        assertThat(broadcast.nickname()).isEqualTo("감자러버");
         assertThat(broadcast.messageText()).isEqualTo("안녕하세요!");
     }
 
@@ -140,6 +157,12 @@ class ChatServiceTest {
         ChatMessage message = ChatMessage.create(7001L, 1L, text);
         setId(message, "messageId", id);
         return message;
+    }
+
+    private com.lottotrip.user.entity.User buildUser(Long id, String nickname) throws Exception {
+        com.lottotrip.user.entity.User user = com.lottotrip.user.entity.User.create(null, nickname, null);
+        setId(user, "id", id);
+        return user;
     }
 
     private void setId(Object entity, String fieldName, Long value) throws Exception {

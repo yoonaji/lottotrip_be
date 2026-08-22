@@ -14,6 +14,8 @@ import com.lottotrip.chat.repository.ChatUserRepository;
 import com.lottotrip.chat.repository.RoomMemberCount;
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.user.entity.User;
+import com.lottotrip.user.repository.UserRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Comparator;
@@ -34,12 +36,14 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatUserRepository chatUserRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final UserRepository userRepository;
 
     public ChatService(ChatRoomRepository chatRoomRepository, ChatUserRepository chatUserRepository,
-                        ChatMessageRepository chatMessageRepository) {
+                        ChatMessageRepository chatMessageRepository, UserRepository userRepository) {
         this.chatRoomRepository = chatRoomRepository;
         this.chatUserRepository = chatUserRepository;
         this.chatMessageRepository = chatMessageRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional(readOnly = true)
@@ -86,11 +90,13 @@ public class ChatService {
         boolean hasNext = fetched.size() > pageSize;
         List<ChatMessage> page = hasNext ? fetched.subList(0, pageSize) : fetched;
 
+        Map<Long, String> nicknamesBySenderId = nicknamesOf(page.stream().map(ChatMessage::getUserId).toList());
+
         List<MessageItem> messages = page.stream()
                 .map(message -> new MessageItem(
                         message.getMessageId(),
                         message.getUserId(),
-                        null, // TODO(A 연동): 닉네임 조회 방법 확정되면 채우기
+                        nicknamesBySenderId.get(message.getUserId()),
                         message.getMessageText(),
                         message.getCreatedAt()
                 ))
@@ -118,10 +124,23 @@ public class ChatService {
                 saved.getMessageId(),
                 roomId,
                 userId,
-                null, // TODO(A 연동): 닉네임 조회 방법 확정되면 채우기
+                nicknameOf(userId),
                 saved.getMessageText(),
                 saved.getCreatedAt()
         );
+    }
+
+    /**
+     * 탈퇴 여부와 무관하게 닉네임을 그대로 보여준다 — 과거 채팅 이력에서 탈퇴한 사람 발언을
+     * "알 수 없음"으로 지울 이유가 없다. 이미 인증(JWT/STOMP)에서 탈퇴 여부는 걸러진 뒤다.
+     */
+    private String nicknameOf(Long userId) {
+        return userRepository.findById(userId).map(User::getNickname).orElse(null);
+    }
+
+    private Map<Long, String> nicknamesOf(List<Long> userIds) {
+        return userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, User::getNickname));
     }
 
     private String encodeCursor(Long lastMessageId) {
