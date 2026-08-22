@@ -51,6 +51,13 @@ oauth:
     # 액세스 토큰으로 사용자 정보를 조회하는 카카오 API.
     # 조회가 성공하면 토큰이 유효한 것이고, 401이면 유효하지 않은 것이다.
     user-info-uri: ${KAKAO_USER_INFO_URI:https://kapi.kakao.com/v2/user/me}
+    # 토큰이 어느 앱을 위해 발급됐는지 확인하는 API. app_id가 여기서 나온다.
+    token-info-uri: ${KAKAO_TOKEN_INFO_URI:https://kapi.kakao.com/v1/user/access_token_info}
+    # 우리 앱의 카카오 앱 ID. 토큰의 app_id가 이 값과 같아야 한다.
+    # 비밀값이 아니라 단순 식별자다 - 카카오 developers > 내 애플리케이션 > 앱 설정 > 앱 키에 있다.
+    # ⚠️ 비어 있으면 카카오 로그인은 400으로 거절된다. 대조를 건너뛰면 다른 앱에서 발급된
+    #    토큰으로도 로그인할 수 있게 되므로, 검사를 못 하면 받지 않는 쪽을 택했다.
+    app-id: ${KAKAO_APP_ID:}
   google:
     # identity token의 서명을 검증할 구글 공개키 목록.
     jwks-uri: ${GOOGLE_JWKS_URI:https://www.googleapis.com/oauth2/v3/certs}
