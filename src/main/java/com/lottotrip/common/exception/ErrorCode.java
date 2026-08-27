@@ -22,6 +22,9 @@ public enum ErrorCode {
     NO_PLACE_FOUND(HttpStatus.NOT_FOUND, "SLOT_001", "반경 내 후보 장소가 없습니다."),
     RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "SLOT_002", "슬롯 결과를 찾을 수 없습니다."),
 
+    // 경로
+    ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "ROUTE_001", "대중교통 경로를 찾을 수 없습니다."),
+
     // 코스
     ALREADY_ADDED(HttpStatus.CONFLICT, "COURSE_001", "이미 코스에 담긴 항목입니다."),
     ITEM_NOT_FOUND(HttpStatus.NOT_FOUND, "COURSE_002", "코스 항목을 찾을 수 없습니다."),

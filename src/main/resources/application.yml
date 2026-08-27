@@ -93,6 +93,13 @@ tourapi:
   # 시드 대상 시도 코드. 강원 = 32 (결정 10 — 적재 범위는 강원 한정)
   seed-area-code: ${SEED_AREA_CODE:32}
 
+odsay:
+  # ODsay Lab 대중교통(버스+지하철) 경로 조회. 콘솔의 "서비스 플랫폼 환경"에
+  # 우리 서버 공인 IP(Elastic IP)가 Server로 등록돼 있어야 호출이 통과한다.
+  base-url: ${ODSAY_BASE_URL:https://api.odsay.com/v1/api}
+  # 비어 있으면 경로 조회 기능만 꺼지고, 서버 기동과 나머지 API에는 영향이 없다.
+  api-key: ${ODSAY_API_KEY:}
+
 anthropic:
   # Claude API (미션 문구 생성 — 결정 17). 모델은 가장 빠른 것을 쓴다.
   # 이 호출이 슬롯 돌리기 응답 시간에 그대로 얹히기 때문이다.
