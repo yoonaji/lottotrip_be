@@ -22,6 +22,7 @@ services:
       APPLE_AUDIENCES: ${APPLE_AUDIENCES}
       TOUR_API_SERVICE_KEY: ${TOUR_API_SERVICE_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ODSAY_API_KEY: ${ODSAY_API_KEY}
     ports:
       # 80으로 받는다 — 아직 Caddy/TLS를 안 얹어서 보안그룹이 열어둔 포트 중 하나로 바로 붙인다.
       - "80:8080"
