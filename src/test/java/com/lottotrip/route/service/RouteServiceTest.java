@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
@@ -78,8 +80,9 @@ class RouteServiceTest extends PostgresContainerSupport {
             }
             """;
 
+    /** 공식 에러코드 표(2026-08-28 실측) 기준 — 경로 탐색 실패는 HTTP 400으로 온다. */
     private static final String CAR_NO_ROUTE_RESPONSE = """
-            { "code": 1, "message": "경로를 찾을 수 없습니다", "route": {} }
+            { "code": 3, "message": "자동차 길 찾기 결과를 제공할 수 없습니다.", "route": {} }
             """;
 
     @Autowired
@@ -104,7 +107,7 @@ class RouteServiceTest extends PostgresContainerSupport {
                 new OdsayProperties("https://api.odsay.com/v1/api", "test-key"));
         NaverDirectionsClient naverDirectionsClient = new NaverDirectionsClient(builder,
                 new NaverDirectionsProperties(
-                        "https://naveropenapi.apigw.ntruss.com/map-direction/v1", "test-key-id", "test-key"));
+                        "https://maps.apigw.ntruss.com/map-direction/v1", "test-key-id", "test-key"));
         routeService = new RouteService(savedSlotRepository, odsayClient, naverDirectionsClient);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
@@ -235,7 +238,9 @@ class RouteServiceTest extends PostgresContainerSupport {
     void propagatesCarRouteNotFound() {
         SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
         mockServer.expect(requestTo(containsString("/driving")))
-                .andRespond(withSuccess(CAR_NO_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(CAR_NO_ROUTE_RESPONSE));
 
         assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), slot.getId()))
                 .isInstanceOf(CustomException.class)

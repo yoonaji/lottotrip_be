@@ -104,7 +104,8 @@ naver-map:
   # 네이버 클라우드 플랫폼(NCP) Maps Directions 5 — 자동차 경로 조회.
   # ⚠️ 소셜 로그인용 NAVER_CLIENT_ID/SECRET과는 완전히 다른 키다 — NCP 콘솔의
   # Maps 서비스에서 별도로 발급받는다. 이름이 비슷해서 헷갈리기 쉽다.
-  base-url: ${NAVER_MAP_BASE_URL:https://naveropenapi.apigw.ntruss.com/map-direction/v1}
+  # ⚠️ 구 도메인(naveropenapi.apigw.ntruss.com)이 아니라 신규 VPC Maps 도메인이다 (실측 2026-08-28).
+  base-url: ${NAVER_MAP_BASE_URL:https://maps.apigw.ntruss.com/map-direction/v1}
   # 비어 있으면 자동차 경로 조회 기능만 꺼진다.
   api-key-id: ${NAVER_MAP_API_KEY_ID:}
   api-key: ${NAVER_MAP_API_KEY:}

@@ -7,10 +7,12 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
 
 /**
  * NCP Maps Directions 5(자동차 길찾기) 담당. 구조는 {@link com.lottotrip.route.odsay.OdsayClient}와 같다.
@@ -18,9 +20,9 @@ import java.util.List;
  * ⚠️ 인증키가 URL이 아니라 헤더로 들어가므로, ODsay·TourAPI에 있던 "URL에 실린 키를 로그에서
  * 가리는" 처리가 필요 없다 — 키가 애초에 URL에 실리지 않는다.
  *
- * ⚠️ 실패 응답의 {@code code} 값별 의미(인증 오류 vs 경로 없음)는 문서 기준의 가정이다.
- * 인증키를 발급받으면 실제 호출 1회로 대조하는 절차가 필요하다 — ODsay 때
- * {@code totalDistance}가 실수로 온다는 걸 실측 전엔 몰랐던 것과 같은 이유다.
+ * ⚠️ 경로 탐색 실패는 ODsay(HTTP 200 + 본문 error)와 다르게 **HTTP 400**으로 온다(공식 문서 실측,
+ * 2026-08-28). 그래서 5xx만 {@code onStatus}로 잡고, 4xx는 예외로 받은 뒤 본문을 다시 읽어
+ * "진짜 경로 없음"과 "인증·형식 오류"를 구분한다.
  */
 @Slf4j
 @Component
@@ -30,6 +32,13 @@ public class NaverDirectionsClient {
 
     /** 최단시간 우선 경로. 다른 옵션(tracomfort·traoptimal)은 지금 쓰지 않는다. */
     private static final String OPTION_FASTEST = "trafast";
+
+    /**
+     * 경로 탐색 자체의 실패를 뜻하는 공식 에러코드(문서 실측, 2026-08-28). 전부 HTTP 400으로 온다.
+     * 1=출발·도착 동일, 2=출발/도착이 도로 주변 아님, 3=결과 제공 불가,
+     * 4=경유지가 도로 주변 아님, 5=경유지 포함 직선거리 1500km 이상.
+     */
+    private static final Set<Integer> ROUTE_NOT_FOUND_CODES = Set.of(1, 2, 3, 4, 5);
 
     private final RestClient restClient;
     private final NaverDirectionsProperties properties;
@@ -76,8 +85,8 @@ public class NaverDirectionsClient {
                     .header("x-ncp-apigw-api-key-id", properties.apiKeyId())
                     .header("x-ncp-apigw-api-key", properties.apiKey())
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, (request, res) -> {
-                        log.warn("네이버 길찾기 오류 응답: status={}, uri={}", res.getStatusCode(), uri);
+                    .onStatus(HttpStatusCode::is5xxServerError, (request, res) -> {
+                        log.warn("네이버 길찾기 서버 오류: status={}, uri={}", res.getStatusCode(), uri);
                         throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
                     })
                     .body(NaverDirectionsResponse.class);
@@ -85,27 +94,51 @@ public class NaverDirectionsClient {
             return validate(response, uri);
         } catch (CustomException e) {
             throw e;
+        } catch (RestClientResponseException e) {
+            // 4xx는 위 onStatus가 안 잡으므로 여기로 넘어온다. 본문을 다시 읽어야
+            // "경로가 없는 정상적인 실패"와 "키가 잘못된 진짜 오류"를 구분할 수 있다.
+            throw mapClientError(e, uri);
         } catch (RestClientException e) {
             log.warn("네이버 길찾기 호출 실패 uri={}: {}", uri, e.getMessage());
             throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
         }
     }
 
+    private CustomException mapClientError(RestClientResponseException e, URI uri) {
+        NaverDirectionsResponse body = tryParseErrorBody(e);
+        if (body != null && ROUTE_NOT_FOUND_CODES.contains(body.code())) {
+            log.debug("네이버 길찾기 경로 없음: code={}, message={}", body.code(), body.message());
+            return new CustomException(ErrorCode.ROUTE_NOT_FOUND);
+        }
+        log.warn("네이버 길찾기 오류 응답: status={}, uri={}, body={}",
+                e.getStatusCode(), uri, e.getResponseBodyAsString());
+        return new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
     /**
-     * HTTP는 200인데 본문의 {@code code}가 0이 아닌 경우를 걸러낸다.
-     *
-     * 인증·형식 오류는 NCP API 게이트웨이 단계에서 4xx/5xx로 걸러지고(위 onStatus),
-     * 여기 오는 {@code code != 0}은 문서상 "경로 탐색 자체의 실패"(출발·도착 반경 밖,
-     * 도로 없음 등)를 뜻한다고 가정해 ROUTE_NOT_FOUND로 보낸다.
+     * 인증 실패 같은 진짜 오류는 우리 응답 형태와 다른(또는 빈) 본문으로 온다
+     * (실측: errorCode 210 케이스는 {@code {"error": {...}}} 형태다). 파싱이 안 되면
+     * "경로 없음"이 아니라는 뜻이므로 null로 돌려 SERVICE_UNAVAILABLE로 빠지게 한다.
      */
+    private NaverDirectionsResponse tryParseErrorBody(RestClientResponseException e) {
+        try {
+            return e.getResponseBodyAs(NaverDirectionsResponse.class);
+        } catch (RuntimeException parseError) {
+            log.debug("네이버 길찾기 오류 응답 본문 파싱 실패: {}", parseError.getMessage());
+            return null;
+        }
+    }
+
+    /** HTTP는 200인데 code가 0이 아닌 경우를 방어적으로 거른다. 문서상으로는 일어나지 않아야 한다. */
     private NaverDirectionsResponse validate(NaverDirectionsResponse response, URI uri) {
         if (response == null) {
             log.warn("네이버 길찾기 응답 본문이 비어 있음: uri={}", uri);
             throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
         }
         if (!response.isSuccess()) {
-            log.debug("네이버 길찾기 경로 없음: code={}, message={}", response.code(), response.message());
-            throw new CustomException(ErrorCode.ROUTE_NOT_FOUND);
+            log.warn("네이버 길찾기 200 응답인데 code!=0: code={}, message={}, uri={}",
+                    response.code(), response.message(), uri);
+            throw new CustomException(ErrorCode.SERVICE_UNAVAILABLE);
         }
         return response;
     }

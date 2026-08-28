@@ -16,7 +16,12 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "naver-map")
 public record NaverDirectionsProperties(String baseUrl, String apiKeyId, String apiKey) {
 
-    private static final String DEFAULT_BASE_URL = "https://naveropenapi.apigw.ntruss.com/map-direction/v1";
+    /**
+     * ⚠️ 실측(2026-08-28)으로 확인됨 — {@code naveropenapi.apigw.ntruss.com}(구 NAVER Open API 도메인)이
+     * 아니라 {@code maps.apigw.ntruss.com}(신규 VPC 기반 Maps 상품 도메인)이다. 콘솔에서
+     * "VPC > Maps > Application"으로 발급받은 키는 구 도메인에서 "구독 필요"(errorCode 210)로 거절된다.
+     */
+    private static final String DEFAULT_BASE_URL = "https://maps.apigw.ntruss.com/map-direction/v1";
 
     public NaverDirectionsProperties {
         if (baseUrl == null || baseUrl.isBlank()) {
