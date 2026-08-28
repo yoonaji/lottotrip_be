@@ -2,7 +2,10 @@ package com.lottotrip.route.service;
 
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
+import com.lottotrip.route.navermap.NaverDirectionsClient;
+import com.lottotrip.route.navermap.NaverDirectionsResponse;
 import com.lottotrip.route.odsay.OdsayClient;
 import com.lottotrip.route.odsay.OdsayResponse;
 import com.lottotrip.slot.entity.SavedSlot;
@@ -14,11 +17,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 슬롯을 돌렸던 출발 좌표(숙소)에서 당첨 장소까지의 대중교통 경로 조회.
+ * 슬롯을 돌렸던 출발 좌표(숙소)에서 당첨 장소까지의 경로 조회. 대중교통(ODsay)·자동차(NCP Directions 5)
+ * 둘 다 "그 슬롯의 출발·도착 좌표를 구한다"는 앞부분이 같아서 {@link #loadRouteOrigin}으로 공유한다.
  *
  * "슬롯 결과 조회"(SlotResultService)와 같은 형태로 만들었다 — 슬롯을 찾고, 소유권을 보고,
  * 바깥 API를 불러 응답을 엮는다. 다만 실패해도 우리 정보가 나가는 슬롯 결과 조회와 달리
- * 여기는 경로 자체가 응답의 전부라서, ODsay 호출이 실패하면 그대로 실패시킨다.
+ * 여기는 경로 자체가 응답의 전부라서, 바깥 API 호출이 실패하면 그대로 실패시킨다.
  */
 @Slf4j
 @Service
@@ -27,9 +31,37 @@ public class RouteService {
 
     private final SavedSlotRepository savedSlotRepository;
     private final OdsayClient odsayClient;
+    private final NaverDirectionsClient naverDirectionsClient;
 
     @Transactional(readOnly = true)
     public RouteResponse getTransitRoute(Long userId, Long slotId) {
+        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+
+        OdsayResponse.Path path = odsayClient.findRecommendedRoute(
+                origin.startLongitude(), origin.startLatitude(),
+                origin.endLongitude(), origin.endLatitude());
+
+        return RouteResponse.from(path);
+    }
+
+    @Transactional(readOnly = true)
+    public CarRouteResponse getCarRoute(Long userId, Long slotId) {
+        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+
+        NaverDirectionsResponse.TrafastRoute route = naverDirectionsClient.findFastestRoute(
+                origin.startLongitude(), origin.startLatitude(),
+                origin.endLongitude(), origin.endLatitude());
+
+        return CarRouteResponse.from(route);
+    }
+
+    /**
+     * 슬롯을 찾고, 소유권을 보고, 출발·도착 좌표를 뽑는다.
+     *
+     * @throws CustomException 슬롯이 없거나 남의 슬롯이면 {@link ErrorCode#RESULT_NOT_FOUND},
+     *                          출발 좌표를 모르면(탈퇴로 지워짐) {@link ErrorCode#ROUTE_NOT_FOUND}
+     */
+    private RouteOrigin loadRouteOrigin(Long userId, Long slotId) {
         SavedSlot slot = savedSlotRepository.findById(slotId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESULT_NOT_FOUND));
 
@@ -44,11 +76,12 @@ public class RouteService {
             throw new CustomException(ErrorCode.ROUTE_NOT_FOUND);
         }
 
-        OdsayResponse.Path path = odsayClient.findRecommendedRoute(
-                startLongitude, startLatitude,
+        return new RouteOrigin(startLongitude, startLatitude,
                 slot.getPlace().getLongitude(), slot.getPlace().getLatitude());
+    }
 
-        return RouteResponse.from(path);
+    private record RouteOrigin(double startLongitude, double startLatitude,
+                                double endLongitude, double endLatitude) {
     }
 
     /**

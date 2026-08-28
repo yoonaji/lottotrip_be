@@ -6,7 +6,10 @@ import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.place.entity.Place;
 import com.lottotrip.place.entity.TravelCategory;
 import com.lottotrip.place.repository.PlaceRepository;
+import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
+import com.lottotrip.route.navermap.NaverDirectionsClient;
+import com.lottotrip.route.navermap.NaverDirectionsProperties;
 import com.lottotrip.route.odsay.OdsayClient;
 import com.lottotrip.route.odsay.OdsayProperties;
 import com.lottotrip.slot.entity.SavedSlot;
@@ -63,6 +66,22 @@ class RouteServiceTest extends PostgresContainerSupport {
             { "error": { "code": "-99", "message": "검색결과가 없습니다" } }
             """;
 
+    private static final String CAR_ROUTE_RESPONSE = """
+            {
+              "code": 0,
+              "message": "길찾기를 성공하였습니다.",
+              "route": {
+                "trafast": [
+                  { "summary": { "distance": 11069.0, "duration": 1620000, "tollFare": 0, "taxiFare": 12500 } }
+                ]
+              }
+            }
+            """;
+
+    private static final String CAR_NO_ROUTE_RESPONSE = """
+            { "code": 1, "message": "경로를 찾을 수 없습니다", "route": {} }
+            """;
+
     @Autowired
     private SavedSlotRepository savedSlotRepository;
     @Autowired
@@ -83,7 +102,10 @@ class RouteServiceTest extends PostgresContainerSupport {
         mockServer = MockRestServiceServer.bindTo(builder).build();
         OdsayClient odsayClient = new OdsayClient(builder,
                 new OdsayProperties("https://api.odsay.com/v1/api", "test-key"));
-        routeService = new RouteService(savedSlotRepository, odsayClient);
+        NaverDirectionsClient naverDirectionsClient = new NaverDirectionsClient(builder,
+                new NaverDirectionsProperties(
+                        "https://naveropenapi.apigw.ntruss.com/map-direction/v1", "test-key-id", "test-key"));
+        routeService = new RouteService(savedSlotRepository, odsayClient, naverDirectionsClient);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
         place = placeRepository.save(Place.builder()
@@ -141,12 +163,35 @@ class RouteServiceTest extends PostgresContainerSupport {
         mockServer.verify();
     }
 
+    @Test
+    @DisplayName("자동차 경로도 숙소 좌표에서 당첨 장소까지로 조회한다")
+    void returnsCarRouteFromAccommodationToPlace() {
+        SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
+        mockServer.expect(requestTo(containsString("/driving")))
+                .andRespond(withSuccess(CAR_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
+
+        CarRouteResponse response = routeService.getCarRoute(user.getId(), slot.getId());
+
+        assertThat(response.totalMinutes()).isEqualTo(27); // 1,620,000ms / 60,000
+        assertThat(response.totalDistanceMeters()).isEqualTo(11069.0);
+        assertThat(response.taxiFare()).isEqualTo(12500);
+        mockServer.verify();
+    }
+
     // ---------- 오류 ----------
 
     @Test
     @DisplayName("없는 슬롯이면 RESULT_NOT_FOUND")
     void failsWhenSlotMissing() {
         assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), 999_999L))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("자동차 경로도 없는 슬롯이면 RESULT_NOT_FOUND")
+    void failsCarRouteWhenSlotMissing() {
+        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), 999_999L))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
     }
@@ -181,6 +226,18 @@ class RouteServiceTest extends PostgresContainerSupport {
         expectRouteCall(NO_ROUTE_RESPONSE);
 
         assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId()))
+                .isInstanceOf(CustomException.class)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROUTE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("네이버가 경로 없음을 주면 그대로 ROUTE_NOT_FOUND로 전달한다")
+    void propagatesCarRouteNotFound() {
+        SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
+        mockServer.expect(requestTo(containsString("/driving")))
+                .andRespond(withSuccess(CAR_NO_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), slot.getId()))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROUTE_NOT_FOUND);
     }
