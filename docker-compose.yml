@@ -42,6 +42,7 @@ services:
       ODSAY_API_KEY: ${ODSAY_API_KEY}
       NAVER_MAP_API_KEY_ID: ${NAVER_MAP_API_KEY_ID}
       NAVER_MAP_API_KEY: ${NAVER_MAP_API_KEY}
+      TMAP_APP_KEY: ${TMAP_APP_KEY}
     ports:
       - "8080:8080"
 

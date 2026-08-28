@@ -4,10 +4,13 @@ import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
 import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
+import com.lottotrip.route.dto.WalkRouteResponse;
 import com.lottotrip.route.navermap.NaverDirectionsClient;
 import com.lottotrip.route.navermap.NaverDirectionsResponse;
 import com.lottotrip.route.odsay.OdsayClient;
 import com.lottotrip.route.odsay.OdsayResponse;
+import com.lottotrip.route.tmap.TmapPedestrianClient;
+import com.lottotrip.route.tmap.TmapPedestrianResponse;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.entity.TripSession;
 import com.lottotrip.slot.repository.SavedSlotRepository;
@@ -32,6 +35,7 @@ public class RouteService {
     private final SavedSlotRepository savedSlotRepository;
     private final OdsayClient odsayClient;
     private final NaverDirectionsClient naverDirectionsClient;
+    private final TmapPedestrianClient tmapPedestrianClient;
 
     @Transactional(readOnly = true)
     public RouteResponse getTransitRoute(Long userId, Long slotId) {
@@ -53,6 +57,17 @@ public class RouteService {
                 origin.endLongitude(), origin.endLatitude());
 
         return CarRouteResponse.from(route);
+    }
+
+    @Transactional(readOnly = true)
+    public WalkRouteResponse getWalkRoute(Long userId, Long slotId) {
+        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+
+        TmapPedestrianResponse.Properties properties = tmapPedestrianClient.findRoute(
+                origin.startLongitude(), origin.startLatitude(),
+                origin.endLongitude(), origin.endLatitude());
+
+        return WalkRouteResponse.from(properties);
     }
 
     /**

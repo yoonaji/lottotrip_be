@@ -8,10 +8,13 @@ import com.lottotrip.place.entity.TravelCategory;
 import com.lottotrip.place.repository.PlaceRepository;
 import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
+import com.lottotrip.route.dto.WalkRouteResponse;
 import com.lottotrip.route.navermap.NaverDirectionsClient;
 import com.lottotrip.route.navermap.NaverDirectionsProperties;
 import com.lottotrip.route.odsay.OdsayClient;
 import com.lottotrip.route.odsay.OdsayProperties;
+import com.lottotrip.route.tmap.TmapPedestrianClient;
+import com.lottotrip.route.tmap.TmapProperties;
 import com.lottotrip.slot.entity.SavedSlot;
 import com.lottotrip.slot.entity.TransportType;
 import com.lottotrip.slot.entity.TripSession;
@@ -85,6 +88,15 @@ class RouteServiceTest extends PostgresContainerSupport {
             { "code": 3, "message": "자동차 길 찾기 결과를 제공할 수 없습니다.", "route": {} }
             """;
 
+    private static final String WALK_ROUTE_RESPONSE = """
+            {
+              "type": "FeatureCollection",
+              "features": [
+                { "type": "Feature", "properties": { "totalDistance": 632, "totalTime": 513, "index": 0 } }
+              ]
+            }
+            """;
+
     @Autowired
     private SavedSlotRepository savedSlotRepository;
     @Autowired
@@ -108,7 +120,9 @@ class RouteServiceTest extends PostgresContainerSupport {
         NaverDirectionsClient naverDirectionsClient = new NaverDirectionsClient(builder,
                 new NaverDirectionsProperties(
                         "https://maps.apigw.ntruss.com/map-direction/v1", "test-key-id", "test-key"));
-        routeService = new RouteService(savedSlotRepository, odsayClient, naverDirectionsClient);
+        TmapPedestrianClient tmapPedestrianClient = new TmapPedestrianClient(builder,
+                new TmapProperties("https://apis.openapi.sk.com", "test-app-key"));
+        routeService = new RouteService(savedSlotRepository, odsayClient, naverDirectionsClient, tmapPedestrianClient);
 
         user = userRepository.save(User.create("a@test.com", "테스터", null));
         place = placeRepository.save(Place.builder()
@@ -178,6 +192,20 @@ class RouteServiceTest extends PostgresContainerSupport {
         assertThat(response.totalMinutes()).isEqualTo(27); // 1,620,000ms / 60,000
         assertThat(response.totalDistanceMeters()).isEqualTo(11069.0);
         assertThat(response.taxiFare()).isEqualTo(12500);
+        mockServer.verify();
+    }
+
+    @Test
+    @DisplayName("도보 경로도 숙소 좌표에서 당첨 장소까지로 조회한다")
+    void returnsWalkRouteFromAccommodationToPlace() {
+        SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withSuccess(WALK_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
+
+        WalkRouteResponse response = routeService.getWalkRoute(user.getId(), slot.getId());
+
+        assertThat(response.totalMinutes()).isEqualTo(8); // 513초 / 60
+        assertThat(response.totalDistanceMeters()).isEqualTo(632);
         mockServer.verify();
     }
 

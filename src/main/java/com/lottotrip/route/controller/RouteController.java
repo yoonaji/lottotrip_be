@@ -3,6 +3,7 @@ package com.lottotrip.route.controller;
 import com.lottotrip.common.response.ApiResponse;
 import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
+import com.lottotrip.route.dto.WalkRouteResponse;
 import com.lottotrip.route.service.RouteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,5 +41,14 @@ public class RouteController {
     public ApiResponse<CarRouteResponse> getCarRoute(@AuthenticationPrincipal Long userId,
                                                       @PathVariable Long slotId) {
         return ApiResponse.success(routeService.getCarRoute(userId, slotId));
+    }
+
+    @Operation(summary = "슬롯 결과 장소까지 도보 경로 조회",
+            description = "슬롯을 돌릴 때의 출발 좌표(숙소)에서 당첨 장소까지 도보 경로를 T맵으로 조회한다. "
+                    + "경로가 없으면 404, 남의 슬롯도 404.")
+    @GetMapping("/slot/{slotId}/walk")
+    public ApiResponse<WalkRouteResponse> getWalkRoute(@AuthenticationPrincipal Long userId,
+                                                        @PathVariable Long slotId) {
+        return ApiResponse.success(routeService.getWalkRoute(userId, slotId));
     }
 }
