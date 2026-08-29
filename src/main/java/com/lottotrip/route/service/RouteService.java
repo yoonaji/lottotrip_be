@@ -2,6 +2,7 @@ package com.lottotrip.route.service;
 
 import com.lottotrip.common.exception.CustomException;
 import com.lottotrip.common.exception.ErrorCode;
+import com.lottotrip.place.entity.Place;
 import com.lottotrip.route.dto.CarRouteResponse;
 import com.lottotrip.route.dto.RouteResponse;
 import com.lottotrip.route.dto.WalkRouteResponse;
@@ -12,7 +13,6 @@ import com.lottotrip.route.odsay.OdsayResponse;
 import com.lottotrip.route.tmap.TmapPedestrianClient;
 import com.lottotrip.route.tmap.TmapPedestrianResponse;
 import com.lottotrip.slot.entity.SavedSlot;
-import com.lottotrip.slot.entity.TripSession;
 import com.lottotrip.slot.repository.SavedSlotRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +20,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 슬롯을 돌렸던 출발 좌표(숙소)에서 당첨 장소까지의 경로 조회. 대중교통(ODsay)·자동차(NCP Directions 5)
- * 둘 다 "그 슬롯의 출발·도착 좌표를 구한다"는 앞부분이 같아서 {@link #loadRouteOrigin}으로 공유한다.
+ * 유저의 지금 위치에서 당첨 장소까지의 경로 조회. 대중교통(ODsay)·자동차(NCP Directions 5)·
+ * 도보(T맵) 셋 다 "그 슬롯이 내 것인지 확인하고 도착지 좌표를 구한다"는 앞부분이 같아서
+ * {@link #requireOwnedPlace}로 공유한다.
+ *
+ * ⚠️ 출발 좌표는 슬롯을 돌렸던 시점의 숙소 좌표(세션에 고정된 값)가 아니라 **매 호출마다
+ * 클라이언트가 실어 보내는 실시간 GPS**다 — 슬롯을 돌린 뒤 유저가 이동했을 수 있어서다.
+ * 그래서 세션(TripSession)은 소유권 확인에만 쓰이고 좌표는 안 본다.
  *
  * "슬롯 결과 조회"(SlotResultService)와 같은 형태로 만들었다 — 슬롯을 찾고, 소유권을 보고,
  * 바깥 API를 불러 응답을 엮는다. 다만 실패해도 우리 정보가 나가는 슬롯 결과 조회와 달리
@@ -38,65 +43,48 @@ public class RouteService {
     private final TmapPedestrianClient tmapPedestrianClient;
 
     @Transactional(readOnly = true)
-    public RouteResponse getTransitRoute(Long userId, Long slotId) {
-        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+    public RouteResponse getTransitRoute(Long userId, Long slotId, double latitude, double longitude) {
+        Place place = requireOwnedPlace(userId, slotId);
 
         OdsayResponse.Path path = odsayClient.findRecommendedRoute(
-                origin.startLongitude(), origin.startLatitude(),
-                origin.endLongitude(), origin.endLatitude());
+                longitude, latitude, place.getLongitude(), place.getLatitude());
 
         return RouteResponse.from(path);
     }
 
     @Transactional(readOnly = true)
-    public CarRouteResponse getCarRoute(Long userId, Long slotId) {
-        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+    public CarRouteResponse getCarRoute(Long userId, Long slotId, double latitude, double longitude) {
+        Place place = requireOwnedPlace(userId, slotId);
 
         NaverDirectionsResponse.TrafastRoute route = naverDirectionsClient.findFastestRoute(
-                origin.startLongitude(), origin.startLatitude(),
-                origin.endLongitude(), origin.endLatitude());
+                longitude, latitude, place.getLongitude(), place.getLatitude());
 
         return CarRouteResponse.from(route);
     }
 
     @Transactional(readOnly = true)
-    public WalkRouteResponse getWalkRoute(Long userId, Long slotId) {
-        RouteOrigin origin = loadRouteOrigin(userId, slotId);
+    public WalkRouteResponse getWalkRoute(Long userId, Long slotId, double latitude, double longitude) {
+        Place place = requireOwnedPlace(userId, slotId);
 
         TmapPedestrianResponse.Properties properties = tmapPedestrianClient.findRoute(
-                origin.startLongitude(), origin.startLatitude(),
-                origin.endLongitude(), origin.endLatitude());
+                longitude, latitude, place.getLongitude(), place.getLatitude());
 
         return WalkRouteResponse.from(properties);
     }
 
     /**
-     * 슬롯을 찾고, 소유권을 보고, 출발·도착 좌표를 뽑는다.
+     * 슬롯을 찾고, 소유권을 보고, 도착지(당첨 장소)를 뽑는다. 출발지는 호출부가 넘겨준
+     * 실시간 좌표를 그대로 쓰므로 여기서는 다루지 않는다.
      *
-     * @throws CustomException 슬롯이 없거나 남의 슬롯이면 {@link ErrorCode#RESULT_NOT_FOUND},
-     *                          출발 좌표를 모르면(탈퇴로 지워짐) {@link ErrorCode#ROUTE_NOT_FOUND}
+     * @throws CustomException 슬롯이 없거나 남의 슬롯이면 {@link ErrorCode#RESULT_NOT_FOUND}
      */
-    private RouteOrigin loadRouteOrigin(Long userId, Long slotId) {
+    private Place requireOwnedPlace(Long userId, Long slotId) {
         SavedSlot slot = savedSlotRepository.findById(slotId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESULT_NOT_FOUND));
 
         requireOwner(slot, userId);
 
-        TripSession session = slot.getSession();
-        Double startLatitude = session.getAccommodationLatitude();
-        Double startLongitude = session.getAccommodationLongitude();
-        // 탈퇴 시 숙소 좌표가 지워진다(TripSession.eraseAccommodationLocation, 결정 20).
-        // 그런 세션은 출발지를 모르므로 경로를 만들 수 없다.
-        if (startLatitude == null || startLongitude == null) {
-            throw new CustomException(ErrorCode.ROUTE_NOT_FOUND);
-        }
-
-        return new RouteOrigin(startLongitude, startLatitude,
-                slot.getPlace().getLongitude(), slot.getPlace().getLatitude());
-    }
-
-    private record RouteOrigin(double startLongitude, double startLatitude,
-                                double endLongitude, double endLatitude) {
+        return slot.getPlace();
     }
 
     /**

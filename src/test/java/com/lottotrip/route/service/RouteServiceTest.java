@@ -151,12 +151,12 @@ class RouteServiceTest extends PostgresContainerSupport {
     // ---------- 성공 ----------
 
     @Test
-    @DisplayName("숙소 좌표에서 당첨 장소까지의 경로를 돌려준다")
-    void returnsRouteFromAccommodationToPlace() {
+    @DisplayName("지금 위치에서 당첨 장소까지의 경로를 돌려준다")
+    void returnsRouteFromLiveLocationToPlace() {
         SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
         expectRouteCall(ROUTE_RESPONSE);
 
-        RouteResponse response = routeService.getTransitRoute(user.getId(), slot.getId());
+        RouteResponse response = routeService.getTransitRoute(user.getId(), slot.getId(), 37.7519, 128.8761);
 
         assertThat(response.totalMinutes()).isEqualTo(45);
         assertThat(response.legs()).hasSize(1);
@@ -166,28 +166,29 @@ class RouteServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("숙소 좌표를 출발지로, 장소 좌표를 도착지로 보낸다")
-    void sendsAccommodationAsStartAndPlaceAsEnd() {
-        SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
+    @DisplayName("호출부가 넘긴 실시간 좌표를 출발지로, 장소 좌표를 도착지로 보낸다 — 세션의 숙소 좌표는 안 본다")
+    void sendsLiveLocationAsStartAndPlaceAsEnd() {
+        // 세션에는 다른 좌표(숙소)를 심어 둔다 — 응답이 이 값이 아니라 호출 시 넘긴 좌표를 썼는지 확인하기 위해서다.
+        SavedSlot slot = savedSlotOf(user, 37.0000, 128.0000);
         mockServer.expect(requestTo(containsString("SX=128.8761")))
                 .andExpect(requestTo(containsString("SY=37.7519")))
                 .andExpect(requestTo(containsString("EX=128.8954")))
                 .andExpect(requestTo(containsString("EY=37.8021")))
                 .andRespond(withSuccess(ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
 
-        routeService.getTransitRoute(user.getId(), slot.getId());
+        routeService.getTransitRoute(user.getId(), slot.getId(), 37.7519, 128.8761);
 
         mockServer.verify();
     }
 
     @Test
-    @DisplayName("자동차 경로도 숙소 좌표에서 당첨 장소까지로 조회한다")
-    void returnsCarRouteFromAccommodationToPlace() {
+    @DisplayName("자동차 경로도 지금 위치에서 당첨 장소까지로 조회한다")
+    void returnsCarRouteFromLiveLocationToPlace() {
         SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
         mockServer.expect(requestTo(containsString("/driving")))
                 .andRespond(withSuccess(CAR_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
 
-        CarRouteResponse response = routeService.getCarRoute(user.getId(), slot.getId());
+        CarRouteResponse response = routeService.getCarRoute(user.getId(), slot.getId(), 37.7519, 128.8761);
 
         assertThat(response.totalMinutes()).isEqualTo(27); // 1,620,000ms / 60,000
         assertThat(response.totalDistanceMeters()).isEqualTo(11069.0);
@@ -196,13 +197,13 @@ class RouteServiceTest extends PostgresContainerSupport {
     }
 
     @Test
-    @DisplayName("도보 경로도 숙소 좌표에서 당첨 장소까지로 조회한다")
-    void returnsWalkRouteFromAccommodationToPlace() {
+    @DisplayName("도보 경로도 지금 위치에서 당첨 장소까지로 조회한다")
+    void returnsWalkRouteFromLiveLocationToPlace() {
         SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
         mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
                 .andRespond(withSuccess(WALK_ROUTE_RESPONSE, MediaType.APPLICATION_JSON));
 
-        WalkRouteResponse response = routeService.getWalkRoute(user.getId(), slot.getId());
+        WalkRouteResponse response = routeService.getWalkRoute(user.getId(), slot.getId(), 37.7519, 128.8761);
 
         assertThat(response.totalMinutes()).isEqualTo(8); // 513초 / 60
         assertThat(response.totalDistanceMeters()).isEqualTo(632);
@@ -214,7 +215,7 @@ class RouteServiceTest extends PostgresContainerSupport {
     @Test
     @DisplayName("없는 슬롯이면 RESULT_NOT_FOUND")
     void failsWhenSlotMissing() {
-        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), 999_999L))
+        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), 999_999L, 37.7519, 128.8761))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
     }
@@ -222,7 +223,7 @@ class RouteServiceTest extends PostgresContainerSupport {
     @Test
     @DisplayName("자동차 경로도 없는 슬롯이면 RESULT_NOT_FOUND")
     void failsCarRouteWhenSlotMissing() {
-        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), 999_999L))
+        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), 999_999L, 37.7519, 128.8761))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
     }
@@ -233,21 +234,10 @@ class RouteServiceTest extends PostgresContainerSupport {
         User other = userRepository.save(User.create("b@test.com", "남", null));
         SavedSlot slot = savedSlotOf(other, 37.7519, 128.8761);
 
-        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId()))
+        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId(), 37.7519, 128.8761))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.RESULT_NOT_FOUND);
         mockServer.verify(); // 기대를 걸지 않았으므로 ODsay 호출이 있었다면 여기서 터진다
-    }
-
-    @Test
-    @DisplayName("탈퇴로 숙소 좌표가 지워진 세션은 ROUTE_NOT_FOUND — 출발지를 모른다")
-    void failsWhenAccommodationCoordinateErased() {
-        SavedSlot slot = savedSlotOf(user, null, null);
-
-        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId()))
-                .isInstanceOf(CustomException.class)
-                .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROUTE_NOT_FOUND);
-        mockServer.verify();
     }
 
     @Test
@@ -256,7 +246,7 @@ class RouteServiceTest extends PostgresContainerSupport {
         SavedSlot slot = savedSlotOf(user, 37.7519, 128.8761);
         expectRouteCall(NO_ROUTE_RESPONSE);
 
-        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId()))
+        assertThatThrownBy(() -> routeService.getTransitRoute(user.getId(), slot.getId(), 37.7519, 128.8761))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROUTE_NOT_FOUND);
     }
@@ -270,7 +260,7 @@ class RouteServiceTest extends PostgresContainerSupport {
                         .contentType(MediaType.APPLICATION_JSON)
                         .body(CAR_NO_ROUTE_RESPONSE));
 
-        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), slot.getId()))
+        assertThatThrownBy(() -> routeService.getCarRoute(user.getId(), slot.getId(), 37.7519, 128.8761))
                 .isInstanceOf(CustomException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorCode.ROUTE_NOT_FOUND);
     }
