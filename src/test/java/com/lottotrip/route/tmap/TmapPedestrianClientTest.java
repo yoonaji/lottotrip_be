@@ -29,7 +29,7 @@ class TmapPedestrianClientTest {
     private static final String BASE_URL = "https://apis.openapi.sk.com";
     private static final String APP_KEY = "test-app-key";
 
-    /** 요약이 첫 feature에만 실린다 — 문서 기준 가정. 실제 응답은 아직 실측 전이다. */
+    /** 요약이 첫 feature에만 실린다 — 실제 응답(2026-08-29 실측) 기준. */
     private static final String SUCCESS_RESPONSE = """
             {
               "type": "FeatureCollection",
@@ -40,6 +40,31 @@ class TmapPedestrianClientTest {
                   "properties": { "index": 1, "description": "직진" } }
               ]
             }
+            """;
+
+    /** 실제로 받아온 응답이다(2026-08-29, 발급받은 키로 출발=도착에 가까운 좌표를 호출). */
+    private static final String WAYPOINTS_TOO_NEAR_RESPONSE = """
+            { "error": { "id": "400", "category": "tmap", "code": "1007",
+                         "message": "사용할 수 없는 좌표계입니다. 사용 가능한 좌표계를 확인해주세요.([BadRequest]waypoints are too near. 100)" } }
+            """;
+
+    /** 실제로 받아온 응답이다(2026-08-29, 바다 한가운데처럼 도로 주변이 아닌 좌표로 호출). */
+    private static final String NO_SERVICE_AREA_RESPONSE = """
+            { "error": { "id": "400", "category": "tmap", "code": "3102",
+                         "message": "해당 서비스가 지원되지 않는 구간입니다.([NoServiceArea]No service area for source)" } }
+            """;
+
+    /**
+     * 실제로 받아온 응답이다(2026-08-29, 콘솔에 "보행자 경로안내" 상품이 추가되기 전 키로 호출).
+     * category가 tmap이 아니라 gw(게이트웨이) — 우리 응답 스키마와 다른 인증 단계 거절이다.
+     */
+    private static final String INVALID_API_KEY_RESPONSE = """
+            { "error": { "id": "403", "category": "gw", "code": "INVALID_API_KEY", "message": "Forbidden" } }
+            """;
+
+    /** 실제로 받아온 응답이다(2026-08-29, 요청 바디에 필수 파라미터를 빠뜨리고 호출). */
+    private static final String MISSING_PARAMETER_RESPONSE = """
+            { "error": { "id": "400", "category": "tmap", "code": "9401", "message": "필수 파라메터가 없습니다." } }
             """;
 
     private RestClient.Builder builder;
@@ -143,8 +168,66 @@ class TmapPedestrianClientTest {
     }
 
     @Test
-    @DisplayName("인증키 오류로 4xx를 줘도 SERVICE_UNAVAILABLE — 문서에 에러코드 체계가 없어 뭉뚱그린다")
-    void failsOnClientError() {
+    @DisplayName("출발·도착이 너무 가까우면(code 1007) ROUTE_NOT_FOUND")
+    void failsWithRouteNotFoundWhenWaypointsTooNear() {
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(WAYPOINTS_TOO_NEAR_RESPONSE));
+
+        assertThatThrownBy(() -> client.findRoute(127.1, 37.5, 127.1, 37.5))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.ROUTE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("좌표가 서비스 지원 구간 밖이면(code 3102) ROUTE_NOT_FOUND")
+    void failsWithRouteNotFoundWhenNoServiceArea() {
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(NO_SERVICE_AREA_RESPONSE));
+
+        assertThatThrownBy(() -> client.findRoute(130.0, 35.0, 130.01, 35.01))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.ROUTE_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("게이트웨이 인증 오류(category=gw)는 ROUTE_NOT_FOUND가 아니라 SERVICE_UNAVAILABLE")
+    void failsWithServiceUnavailableOnInvalidApiKey() {
+        // 이게 진짜 "경로 없음"으로 잘못 분류되면 사용자에게 "그런 경로는 없다"고
+        // 거짓으로 알리게 된다 — 실제로는 우리 쪽 설정(appKey/상품 구독) 문제다.
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withStatus(HttpStatus.FORBIDDEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(INVALID_API_KEY_RESPONSE));
+
+        assertThatThrownBy(() -> client.findRoute(127.1, 37.5, 127.2, 37.6))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("경로 탐색 자체와 무관한 tmap 에러(예: 필수 파라미터 누락 9401)는 SERVICE_UNAVAILABLE")
+    void failsWithServiceUnavailableOnUnmappedTmapCode() {
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withStatus(HttpStatus.BAD_REQUEST)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .body(MISSING_PARAMETER_RESPONSE));
+
+        assertThatThrownBy(() -> client.findRoute(127.1, 37.5, 127.2, 37.6))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    @DisplayName("4xx인데 본문이 아예 없어도 예외를 삼키지 않고 SERVICE_UNAVAILABLE로 정리한다")
+    void failsWithServiceUnavailableOnEmptyErrorBody() {
         mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
                 .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
 
