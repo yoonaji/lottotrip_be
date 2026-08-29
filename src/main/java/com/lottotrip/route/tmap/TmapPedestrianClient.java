@@ -74,6 +74,13 @@ public class TmapPedestrianClient {
         body.put("endName", "도착지");
 
         TmapPedestrianResponse response = call(body);
+        // 실측(2026-08-29): 너무 멀거나 계산 자체가 안 되는 구간(예: 국외 좌표)은 4xx 에러 바디가
+        // 아니라 HTTP 204(본문 없음)로 온다. RestClient는 204를 성공으로 보고 body()가 null을
+        // 돌려주므로, 여기서 안 걸러내면 featureList() 호출에서 NPE로 500이 난다.
+        if (response == null) {
+            log.debug("T맵 보행자 경로 없음: 204 No Content");
+            throw new CustomException(ErrorCode.ROUTE_NOT_FOUND);
+        }
 
         List<TmapPedestrianResponse.Feature> features = response.featureList();
         return features.stream()

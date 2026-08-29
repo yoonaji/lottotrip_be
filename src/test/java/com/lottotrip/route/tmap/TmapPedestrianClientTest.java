@@ -142,6 +142,20 @@ class TmapPedestrianClientTest {
     // ---------- 에러 ----------
 
     @Test
+    @DisplayName("204 No Content(경로 계산 자체가 안 되는 구간)면 ROUTE_NOT_FOUND — NPE로 새면 안 된다")
+    void failsWithRouteNotFoundOnNoContent() {
+        // 실제로 받아온 응답이다(2026-08-29, 국외 좌표처럼 너무 멀어서 계산이 안 되는 구간 호출).
+        // 4xx 에러 바디가 아니라 본문 없는 204라서, RestClient.body()가 null을 돌려준다.
+        mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
+                .andRespond(withStatus(HttpStatus.NO_CONTENT));
+
+        assertThatThrownBy(() -> client.findRoute(120.0, 30.0, 127.2, 37.6))
+                .isInstanceOf(CustomException.class)
+                .extracting("errorCode")
+                .isEqualTo(ErrorCode.ROUTE_NOT_FOUND);
+    }
+
+    @Test
     @DisplayName("요약 feature가 없으면 ROUTE_NOT_FOUND")
     void failsWithRouteNotFoundWhenNoSummaryFeature() {
         mockServer.expect(requestTo(containsString("/tmap/routes/pedestrian")))
