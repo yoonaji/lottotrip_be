@@ -223,6 +223,9 @@ class CourseIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.data.items[1].place.name").value("순포습지"))
                 // draw 때 제시한 그 미션이 그대로 나온다 (7-6 — course_items.slot_id)
                 .andExpect(jsonPath("$.data.items[0].mission.missionId").value(presented.getId()))
+                // 결정 23 — 코스 조회에는 missionId와 completed뿐이라 미션 이름조차 없었다
+                .andExpect(jsonPath("$.data.items[0].mission.title").value("해변 도착 인증하기"))
+                .andExpect(jsonPath("$.data.items[0].mission.guideDescription").value("설명"))
                 // 아직 완료하지 않았으므로 false다. 완료하면 true가 되는 것은
                 // CourseServiceTest와 FullScenarioIntegrationTest가 확인한다(9-1-1).
                 .andExpect(jsonPath("$.data.items[0].mission.completed").value(false))

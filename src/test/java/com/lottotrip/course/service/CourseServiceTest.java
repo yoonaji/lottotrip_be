@@ -321,6 +321,38 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("미션 제목과 본문도 함께 준다 (결정 23)")
+    void includesMissionTitleAndGuideDescription() {
+        // 코스 조회에는 missionId와 completed뿐이라 미션 이름조차 없었다.
+        // 슬롯 조회(4-3)와 같은 값을 실어 코스 화면에서도 미션을 그릴 수 있게 한다.
+        Place place = placeNamed("사천진해변");
+        Mission mission = missionRepository.save(Mission.create(
+                place, "해변 도착 인증하기", "해가 질 무렵 방파제 쪽으로 걸어가 사진을 남겨 보세요.", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().title()).isEqualTo("해변 도착 인증하기");
+        assertThat(response.items().get(0).mission().guideDescription())
+                .isEqualTo("해가 질 무렵 방파제 쪽으로 걸어가 사진을 남겨 보세요.");
+    }
+
+    @Test
+    @DisplayName("본문을 붙여도 completed는 그대로 나간다")
+    void keepsCompletedAlongsideMissionCopy() {
+        // completed는 미션 마스터가 아니라 그 회원의 수행 상태다. 성격이 달라 코스 조회에만 있고,
+        // 본문을 추가하면서 밀려나면 코스 화면이 완료 표시를 못 한다.
+        Place place = placeNamed("사천진해변");
+        Mission mission = missionRepository.save(Mission.create(place, "해변 도착 인증하기", "설명", null, 100));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slotOf(user, place, mission).getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items().get(0).mission().completed()).isFalse();
+        assertThat(response.items().get(0).mission().title()).isEqualTo("해변 도착 인증하기");
+    }
+
+    @Test
     @DisplayName("장소에 미션이 여럿이어도 draw 때 제시한 그 미션을 준다")
     void includesTheMissionPresentedAtDraw() {
         // 이것이 course_items.slot_id를 붙인 이유다. 장소는 미션을 3개까지 갖는데

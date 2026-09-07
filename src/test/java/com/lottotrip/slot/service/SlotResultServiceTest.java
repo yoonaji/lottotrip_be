@@ -188,6 +188,39 @@ class SlotResultServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("미션 본문(guideDescription)을 함께 준다 (결정 23)")
+    void returnsMissionGuideDescription() {
+        // 제목만 나가던 때는 프론트가 "무엇을 어떻게 하는 미션인가"를 띄울 수 없었다.
+        // 값은 이미 missions.guide_description에 저장돼 있었고, 읽어 내보내는 길만 없었다.
+        Mission mission = missionRepository.save(Mission.create(
+                place, "해변 도착 인증하기", "해가 질 무렵 방파제 쪽으로 걸어가 사진을 남겨 보세요.", null, 100));
+        SavedSlot slot = savedSlotOf(user, mission);
+        expectDetailCall();
+
+        SlotResultResponse response = slotResultService.getResult(user.getId(), slot.getId());
+
+        assertThat(response.mission().guideDescription())
+                .isEqualTo("해가 질 무렵 방파제 쪽으로 걸어가 사진을 남겨 보세요.");
+    }
+
+    @Test
+    @DisplayName("본문이 없는 미션이면 guideDescription은 null이다")
+    void allowsNullGuideDescription() {
+        // 컬럼이 nullable이고, ClaudeMissionGenerator가 title 길이만 검사하므로
+        // 모델이 본문을 비우고 답하면 null이 그대로 저장된다. 그래도 미션은 나가야 한다.
+        Mission mission = missionRepository.save(
+                Mission.create(place, "해변 도착 인증하기", null, null, 100));
+        SavedSlot slot = savedSlotOf(user, mission);
+        expectDetailCall();
+
+        SlotResultResponse response = slotResultService.getResult(user.getId(), slot.getId());
+
+        assertThat(response.mission()).isNotNull();
+        assertThat(response.mission().title()).isEqualTo("해변 도착 인증하기");
+        assertThat(response.mission().guideDescription()).isNull();
+    }
+
+    @Test
     @DisplayName("장소에 미션이 여럿이어도 제시했던 것만 나온다 — 조회할 때마다 바뀌지 않는다")
     void returnsSameMissionOnRepeatedCalls() {
         // 결정 14 이전에는 "가장 먼저 등록된 미션"을 돌려줘서 draw가 보여 준 것과 달라질 수 있었다.

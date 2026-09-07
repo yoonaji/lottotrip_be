@@ -240,6 +240,22 @@ class SlotDrawServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("미션 본문(guideDescription)도 함께 준다 (결정 23)")
+    void attachesMissionGuideDescription() {
+        // draw 응답만 보고 미션 화면을 그릴 수 있어야 한다. 제목만 나가면
+        // 프론트가 본문을 받아올 길이 없다 — 미션 단건 조회 엔드포인트도 없다.
+        expectDraw(oneCandidate("사천진해변", "", "1113.0"));
+
+        SlotDrawResponse response = slotService.draw(user.getId(), walkRequest());
+
+        assertThat(response.mission().guideDescription()).isNotBlank();
+        assertThat(missionRepository.findById(response.mission().missionId())).isPresent()
+                .get()
+                .satisfies(saved -> assertThat(saved.getGuideDescription())
+                        .isEqualTo(response.mission().guideDescription()));
+    }
+
+    @Test
     @DisplayName("대표 이미지는 목록 응답에서 바로 나온다 — place_media를 다시 조회하지 않는다")
     void exposesThumbnailFromApiResponse() {
         expectDraw(oneCandidate("사천진해변", "https://cdn.example.com/beach.jpg", "1113.0"));

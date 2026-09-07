@@ -12,7 +12,7 @@ import com.lottotrip.place.dto.PlaceDetail;
  * (`tour_api_erd.md` 4-3의 응답 예시는 현재 구현에 맞춰 갱신했다.)
  *
  * @param place   장소 정보. DB에 담아 둔 값 + TourAPI 실시간 조회 결과가 섞여 있다
- * @param mission 이 장소의 미션. **없을 수 있다**
+ * @param mission 이 장소의 미션. **없을 수 있다.** 제목과 본문을 함께 싣는다 (결정 23)
  */
 public record SlotResultResponse(
         Long slotId,
@@ -20,13 +20,18 @@ public record SlotResultResponse(
         MissionInfo mission
 ) {
 
-    public record MissionInfo(Long missionId, String title) {
+    /**
+     * @param guideDescription 미션 수행 방법 안내. `missions.guide_description` (결정 23).
+     *                         null일 수 있다 — 컬럼이 nullable이라 본문 없이 저장된 미션이 있다
+     */
+    public record MissionInfo(Long missionId, String title, String guideDescription) {
     }
 
     public static SlotResultResponse of(Long slotId, PlaceDetail place, Mission mission) {
         return new SlotResultResponse(
                 slotId,
                 place,
-                mission == null ? null : new MissionInfo(mission.getId(), mission.getTitle()));
+                mission == null ? null : new MissionInfo(
+                        mission.getId(), mission.getTitle(), mission.getGuideDescription()));
     }
 }
