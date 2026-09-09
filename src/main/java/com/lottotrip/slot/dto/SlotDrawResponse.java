@@ -14,7 +14,8 @@ import com.lottotrip.place.entity.Place;
  * @param slotId  `saved_slots.slot_id`. 7단계 코스 추가가 이 값을 참조한다
  * @param place   뽑힌 장소
  * @param mission 함께 제시할 미션. 없을 수 있다 — 생성까지 실패한 경우이며,
- *                그때도 장소는 정상적으로 뽑혔으므로 응답을 실패시키지 않는다
+ *                그때도 장소는 정상적으로 뽑혔으므로 응답을 실패시키지 않는다.
+ *                제목과 본문을 함께 싣는다 (결정 23)
  */
 public record SlotDrawResponse(
         Long slotId,
@@ -39,7 +40,11 @@ public record SlotDrawResponse(
     ) {
     }
 
-    public record MissionInfo(Long missionId, String title) {
+    /**
+     * @param guideDescription 미션 수행 방법 안내. `missions.guide_description` (결정 23).
+     *                         null일 수 있다 — 컬럼이 nullable이라 본문 없이 저장된 미션이 있다
+     */
+    public record MissionInfo(Long missionId, String title, String guideDescription) {
     }
 
     /**
@@ -66,6 +71,7 @@ public record SlotDrawResponse(
                         place.getLongitude(),
                         distanceKm,
                         thumbnailUrl),
-                mission == null ? null : new MissionInfo(mission.getId(), mission.getTitle()));
+                mission == null ? null : new MissionInfo(
+                        mission.getId(), mission.getTitle(), mission.getGuideDescription()));
     }
 }

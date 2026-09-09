@@ -132,7 +132,9 @@ class SlotIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.data.place.category").value("자연관광지"))
                 .andExpect(jsonPath("$.data.place.distanceKm").isNumber())
                 .andExpect(jsonPath("$.data.mission.missionId").isNumber())
-                .andExpect(jsonPath("$.data.mission.title").isNotEmpty());
+                .andExpect(jsonPath("$.data.mission.title").isNotEmpty())
+                // 결정 23 — 제목만으로는 프론트가 미션 화면을 그릴 수 없었다
+                .andExpect(jsonPath("$.data.mission.guideDescription").isNotEmpty());
     }
 
     @Test
