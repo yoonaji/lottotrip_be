@@ -38,3 +38,24 @@ resource "aws_s3_bucket_policy" "public_read_renders" {
   policy     = data.aws_iam_policy_document.public_read_renders.json
   depends_on = [aws_s3_bucket_public_access_block.dev]
 }
+
+resource "aws_s3_bucket_cors_configuration" "dev" {
+  bucket = aws_s3_bucket.dev.id
+
+  cors_rule {
+    # 브라우저에서 presigned URL로 PUT 업로드 및 필요 시 GET/HEAD 허용
+    allowed_methods = ["PUT", "POST", "GET", "HEAD"]
+
+    # 요청받은 프론트엔드 URL과 로컬 개발용 URL 추가
+    allowed_origins = ["http://localhost:3000", "https://lottotrip-web.vercel.app"]
+
+    # 업로드 시 브라우저가 전송하는 모든 헤더 허용
+    allowed_headers = ["*"]
+
+    # 업로드 완료 후 프론트엔드 스크립트에서 ETag 헤더를 읽을 수 있도록 노출
+    expose_headers  = ["ETag"]
+
+    # 브라우저가 CORS preflight(OPTIONS) 결과를 캐싱할 시간(초)
+    max_age_seconds = 3000
+  }
+}
