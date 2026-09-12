@@ -27,6 +27,34 @@ services:
       NAVER_MAP_API_KEY: ${NAVER_MAP_API_KEY}
       TMAP_APP_KEY: ${TMAP_APP_KEY}
     ports:
-      # 80으로 받는다 — 아직 Caddy/TLS를 안 얹어서 보안그룹이 열어둔 포트 중 하나로 바로 붙인다.
-      - "80:8080"
+      # 외부로는 열지 않는다 — 80/443은 caddy가 받아 TLS를 벗기고 여기로 넘긴다.
+      # 127.0.0.1에만 묶어 두는 건 deploy.sh 헬스체크가 Caddy 리다이렉트(80→443)에 걸리지 않고
+      # 앱에 바로 물어보기 위해서다. 보안그룹은 8080을 열지 않으므로 밖에서는 어차피 안 보인다.
+      - "127.0.0.1:8080:8080"
     restart: unless-stopped
+
+  # TLS 종단 + 리버스 프록시. 인증서 발급·갱신·80→443 리다이렉트·WebSocket 통과를 전부 맡는다.
+  # 설정은 infra/caddy/Caddyfile 한 장. 웹 프론트가 https에서 wss://로 채팅에 붙으려면 이게 있어야 한다
+  # (https 페이지에서 ws://는 mixed content로 브라우저가 막는다).
+  caddy:
+    image: caddy:2-alpine
+    depends_on:
+      - app
+    environment:
+      # 인증서를 받을 호스트명. SSM(/lottotrip-dev/APP_DOMAIN) → deploy.sh → .env
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./infra/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # 발급받은 인증서·ACME 계정. 컨테이너를 갈아엎어도 남아야 한다 — 매번 새로 발급받으면
+      # Let's Encrypt 발급 한도(같은 호스트명 주 5회)에 금방 걸린다.
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:

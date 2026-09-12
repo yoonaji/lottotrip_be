@@ -41,6 +41,17 @@ resource "aws_ssm_parameter" "s3_bucket" {
   value = aws_s3_bucket.dev.bucket
 }
 
+# Caddy가 TLS 인증서를 받을 호스트명. 도메인이 없어서 sslip.io를 쓴다 — `3-37-104-92.sslip.io`처럼
+# IP를 하이픈으로 이어 붙인 이름을 sslip.io의 DNS가 그 IP로 풀어 준다. 등록·비용 없음.
+# Let's Encrypt가 순수 IP에는 인증서를 안 내주기 때문에 이런 이름이 필요하다.
+# EIP에서 계산하므로 인스턴스를 다시 만들어도 값이 따라간다.
+# 실제 도메인을 사면 이 값을 그 도메인으로 바꾸고(DNS A 레코드는 aws_eip.app.public_ip로) 재배포한다.
+resource "aws_ssm_parameter" "app_domain" {
+  name  = "${local.ssm_prefix}/APP_DOMAIN"
+  type  = "String"
+  value = "${replace(aws_eip.app.public_ip, ".", "-")}.sslip.io"
+}
+
 # 카카오/네이버/구글 키 — 지금은 아직 실제 값을 못 받아서 .env.example과 같은 더미값으로
 # 자리만 만들어 둔다. 실제 값이 오면 아래 명령으로 덮어쓰면 되고, 다음 배포(scripts/deploy.sh)가
 # 자동으로 최신 값을 .env에 반영한다.
