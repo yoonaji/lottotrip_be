@@ -213,6 +213,10 @@ applicationEventPublisher.publishEvent(new SlotDrawnEvent(userId, placeId, place
 - 구독(수신): `/sub/chat/rooms/{roomId}`
 - 발행(송신): `/pub/chat/rooms/{roomId}`
 
+> **Origin 허용 (2026-09-12)**: `/ws` 핸드셰이크는 모든 Origin을 허용한다 (`setAllowedOriginPatterns("*")`).
+> Spring 기본은 same-origin만 허용이라 브라우저(웹 프론트, `localhost:3000`·배포 도메인)에서 붙으면 403이었다.
+> iOS 앱은 Origin 헤더를 보내지 않아 그동안 드러나지 않았다. 인증은 그대로 CONNECT 프레임의 JWT로 한다.
+
 ### 인증
 
 CONNECT 프레임의 `Authorization` STOMP 헤더로 JWT access token 전달 (`Authorization: Bearer <token>`). URL 쿼리 파라미터로 토큰을 넣지 않는다 — 프록시/로그에 노출될 수 있기 때문. 서버는 `ChannelInterceptor`에서 `StompCommand.CONNECT`일 때만 토큰을 검증하고, 인증된 유저를 세션의 Principal로 바인딩해 이후 SEND/SUBSCRIBE에서 재사용한다.
