@@ -36,7 +36,9 @@ jobs:
 
           echo "SSM Command ID: $COMMAND_ID"
 
-          for i in $(seq 1 40); do
+          # 5초 × 120회 = 10분. 정상 배포가 3분 6초 걸리는데 상한이 40회(3분 20초)라
+          # 조금만 늦어도 SSM 명령은 멀쩡히 돌고 있는데 워크플로만 실패로 끝났다 (2026-09-12).
+          for i in $(seq 1 120); do
             sleep 5
             STATUS=$(aws ssm get-command-invocation \
               --command-id "$COMMAND_ID" \
