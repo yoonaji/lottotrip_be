@@ -308,6 +308,18 @@ class CourseServiceTest extends PostgresContainerSupport {
     }
 
     @Test
+    @DisplayName("담은 슬롯의 slotId를 함께 준다 — 코스 화면에서 슬롯 상세·경로로 건너가는 데 쓴다")
+    void includesSlotId() {
+        SavedSlot slot = slotOf(user, placeNamed("경포해변"));
+        courseService.addItem(user.getId(), new CourseItemAddRequest(slot.getId()));
+
+        CourseItemsResponse response = courseService.getItems(user.getId());
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).slotId()).isEqualTo(slot.getId());
+    }
+
+    @Test
     @DisplayName("슬롯이 제시한 미션을 함께 준다")
     void includesMission() {
         Place place = placeNamed("사천진해변");
