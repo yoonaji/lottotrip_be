@@ -210,8 +210,9 @@ class CourseIntegrationTest extends PostgresContainerSupport {
     void listsItemsInOrder() throws Exception {
         Place first = placeNamed("사천진해변");
         Mission presented = missionRepository.save(Mission.create(first, "해변 도착 인증하기", "설명", null, 100));
+        SavedSlot firstSlot = slotOf(user, first, presented);
         mockMvc.perform(post(ITEMS_PATH).header("Authorization", token)
-                .contentType(MediaType.APPLICATION_JSON).content(addBody(slotOf(user, first, presented).getId())));
+                .contentType(MediaType.APPLICATION_JSON).content(addBody(firstSlot.getId())));
         mockMvc.perform(post(ITEMS_PATH).header("Authorization", token)
                 .contentType(MediaType.APPLICATION_JSON).content(addBody(slotOf(user, placeNamed("순포습지")).getId())));
 
@@ -221,6 +222,8 @@ class CourseIntegrationTest extends PostgresContainerSupport {
                 .andExpect(jsonPath("$.data.items.length()").value(2))
                 .andExpect(jsonPath("$.data.items[0].place.name").value("사천진해변"))
                 .andExpect(jsonPath("$.data.items[1].place.name").value("순포습지"))
+                // 담은 슬롯의 번호. 웹 코스 화면이 슬롯 상세(4-3)·경로(10장)로 건너가는 데 쓴다
+                .andExpect(jsonPath("$.data.items[0].slotId").value(firstSlot.getId()))
                 // draw 때 제시한 그 미션이 그대로 나온다 (7-6 — course_items.slot_id)
                 .andExpect(jsonPath("$.data.items[0].mission.missionId").value(presented.getId()))
                 // 아직 완료하지 않았으므로 false다. 완료하면 true가 되는 것은
