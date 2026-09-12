@@ -22,6 +22,20 @@ echo "==> 최신 코드로 갱신"
 git fetch origin main
 git reset --hard origin/main
 
+# ⚠️ 여기서부터는 갱신된 이 파일로 다시 시작한다.
+#
+# bash는 스크립트 파일을 열어 둔 채 읽어 나가는데, 바로 위의 reset이 deploy.sh를 새 파일로
+# 갈아끼운다(새 inode). bash는 이미 열어 둔 옛 파일을 끝까지 읽으므로, 이 줄이 없으면
+# "옛 deploy.sh가 새 코드 위에서" 돌게 된다 — deploy.sh 변경이 항상 한 배포 늦게 적용됐다.
+# 2026-09-12에 그렇게 두 번 연속 배포가 깨졌다: 옛 스크립트의 `up -d app`이 새 compose(caddy 포함)
+# 위에서 돌아 80이 비었고, 그 다음엔 옛 스크립트의 APP_DOMAIN 가드가 revert된 코드 위에서 돌았다.
+#
+# exec: 이 프로세스를 새 파일의 bash로 통째로 바꾼다. 환경변수 DEPLOY_REEXEC로 한 번만 하게 막는다.
+if [ -z "${DEPLOY_REEXEC:-}" ]; then
+  echo "==> 갱신된 deploy.sh로 다시 실행"
+  DEPLOY_REEXEC=1 exec bash "$APP_DIR/scripts/deploy.sh"
+fi
+
 echo "==> SSM에서 시크릿 꺼내서 .env 생성"
 aws ssm get-parameters-by-path \
   --path "$SSM_PATH" \
