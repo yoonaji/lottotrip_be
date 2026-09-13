@@ -15,6 +15,13 @@ spring:
 jwt:
   secret: ${JWT_SECRET}
 
+# Caddy(리버스 프록시) 뒤에서 돈다. 앱에 닿는 요청은 전부 평문 http라서, 이 설정이 없으면
+# 앱이 자기 주소를 http://로 안다 — Swagger UI가 http 서버 주소를 만들고, 리다이렉트도 http로 나간다.
+# native: 프록시가 붙인 X-Forwarded-Proto / X-Forwarded-For를 서블릿 컨테이너(Tomcat)가 읽어
+# scheme·클라이언트 IP를 원래 값으로 되돌린다. Caddy는 이 헤더를 기본으로 붙인다.
+server:
+  forward-headers-strategy: native
+
 # 프론트가 배포 서버 스펙을 바로 참고할 수 있도록 켜 둔다(2026-08-29 결정).
 # 도메인·TLS·인증 없는 IP 접속 서버라 전체 API 구조가 외부에 그대로 노출된다는
 # 위험을 알고 켠 것 — 도메인/TLS 붙이거나 팀 외 공개 시점엔 다시 꺼야 한다.
