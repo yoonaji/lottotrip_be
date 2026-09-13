@@ -1,0 +1,15 @@
+# 운영(EC2) 리버스 프록시. docker-compose.prod.yml의 caddy 서비스가 /etc/caddy/Caddyfile로 마운트한다.
+#
+# 사이트 주소에 호스트명을 적으면 Caddy가 알아서 한다:
+#   - Let's Encrypt(실패 시 ZeroSSL)에서 인증서를 받고 만료 전에 갱신한다 (/data 볼륨에 보관)
+#   - 80으로 온 요청은 443으로 리다이렉트한다 (ACME 챌린지는 80에서 그대로 받는다)
+#   - WebSocket 업그레이드(/ws, STOMP)를 그대로 통과시킨다 — 별도 설정이 필요 없다
+#   - X-Forwarded-For / X-Forwarded-Proto 헤더를 붙인다 (앱은 forward-headers-strategy: native로 읽는다)
+#
+# APP_DOMAIN은 SSM(/lottotrip-dev/APP_DOMAIN)에서 deploy.sh가 .env로 받아온다.
+# 도메인 없이 sslip.io를 쓴다 — `3-37-104-92.sslip.io`처럼 IP를 이름에 박으면 DNS가 그 IP로 풀어 준다.
+# Let's Encrypt는 순수 IP에는 인증서를 내주지 않아서 이런 이름이 하나 필요하다.
+# 실제 도메인을 사면 SSM 값만 바꾸고 재배포하면 된다.
+{$APP_DOMAIN} {
+	reverse_proxy app:8080
+}
